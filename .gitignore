@@ -1,0 +1,6 @@
+node_modules/
+.direnv/
+.envrc
+tmp/
+nimcache/
+*.js
