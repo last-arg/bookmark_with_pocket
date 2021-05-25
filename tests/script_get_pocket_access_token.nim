@@ -74,7 +74,7 @@ proc main() =
   var firefox_opts = firefoxOptions(
     pageLoadStrategy = some(PageLoadStrategy.plsEager),
     logLevel = some("trace"),
-    args = @["--headless"],
+    # args = @["--headless"],
     additionalCapabilities = caps
   )
 

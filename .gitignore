@@ -4,3 +4,4 @@ node_modules/
 tmp/
 nimcache/
 *.js
+tests/script_*
