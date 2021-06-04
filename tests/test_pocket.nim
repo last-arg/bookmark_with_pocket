@@ -2,8 +2,8 @@ import asyncjs, jsffi, dom
 import jsconsole
 import balls
 import results
-import ../src/pocket, ../src/main, ../src/bookmarks, ../src/background
-
+import ../src/pocket, ../src/main, ../src/bookmarks, ../src/background,
+    ../src/web_ext_browser
 type
   Port* = ref PortObj
   PortObj {.importjs.} = object

@@ -1,6 +1,6 @@
 import dom, jsffi, asyncjs
 import jsconsole
-import bookmarks
+import web_ext_browser, bookmarks
 import pocket
 
 type
