@@ -1,4 +1,4 @@
-import options, os, strformat
+import options, os, strformat, strtabs
 import halonium
 import json
 import tables
@@ -66,6 +66,16 @@ proc main() =
     echo fmt"ERR: missing key/value pair username or/and password in file '{filename}'"
     return
 
+  let profiles_rel_loc = getCurrentDir() & "/tmp/gecko_profiles"
+  removeDir(profiles_rel_loc)
+  createDir(profiles_rel_loc)
+
+  var session_envs = newStringTable()
+  for key, val in envPairs():
+    session_envs[key] = val
+
+  session_envs["TMPDIR"] = profiles_rel_loc
+
   let caps = %*{
     "browserName": "firefox",
     "acceptInsecureCerts": true,
@@ -75,12 +85,16 @@ proc main() =
     pageLoadStrategy = some(PageLoadStrategy.plsEager),
     logLevel = some("trace"),
     # args = @["--headless"],
+
+      # https://bugzilla.mozilla.org/show_bug.cgi?id=1421766
+    # args = @["-profile", tmp_firefox_profile],
     additionalCapabilities = caps
   )
 
   firefox_opts["moz:firefoxOptions"]["prefs"] = %*{
     "xpinstall.signatures.required": false,
     "browser.aboutConfig.showWarning": false,
+    "storage.sqlite.exclusiveLock.enabled": false,
   }
 
   echo $firefox_opts
@@ -89,6 +103,8 @@ proc main() =
   let session = createSession(
     Firefox,
     browserOptions = firefox_opts,
+    env = session_envs,
+    # port = 2828,
       # port = 13366,
     hideDriverConsoleWindow = true,
     # logLevel = "debug",
@@ -121,7 +137,7 @@ proc main() =
 
   let tab = session.newWindow(WindowKind.wkTab)
   session.switchToWindow(tab)
-  session.navigate(fmt"moz-extension://{uuid}/index.html")
+  session.navigate(fmt"moz-extension://{uuid}/blank.html")
 
   var do_pocket_login = false
   let localstorage_file = open("tmp/localstorage.json", mode = fmRead)
@@ -139,9 +155,11 @@ proc main() =
         localStorage.setItem("access_token", arguments[1]);
       """,
     local["username"].getStr(), access_token)
-    session.refresh()
+    # session.refresh()
   except JsonParsingError, InvalidAccessToken:
     do_pocket_login = true
+
+  session.navigate(fmt"moz-extension://{uuid}/index.html")
 
   if do_pocket_login:
     echo "Do Pocket login"

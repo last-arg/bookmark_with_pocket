@@ -9,10 +9,10 @@ binDir = "dist"
 bin = @["bookmark_pocket"]
 # skipDirs = @["balls"]
 
-backend = "js"
+# backend = "js"
 
 # Dependencies
 
 requires "nim >= 1.4.6"
 requires "result"
-requires "https://github.com/disruptek/balls >= 2.5.0 & < 3.0.0"
+requires "https://github.com/disruptek/balls >= 3.0.0"

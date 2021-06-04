@@ -4,6 +4,7 @@ import results
 
 proc getRedirectURL*(): cstring {.importcpp: "browser.identity.getRedirectURL()".}
 
+const pocket_add_folder* = "pocket"
 let consumer_key*: cstring = "88239-c5239ac90c414b6515d526f4"
 # const redirect_uri: cstring = "https://localhost"
 let redirect_uri: cstring = getRedirectURL() & "oauth"
