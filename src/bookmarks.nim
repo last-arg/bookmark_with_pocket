@@ -74,6 +74,8 @@ proc newChanges*(title: cstring = nil, url: cstring = nil): Changes =
 {.push importcpp.}
 
 proc create*(bm: Bookmarks, details: CreateDetails): Future[BookmarkTreeNode]
+proc remove*(bm: Bookmarks, id: cstring): Future[void]
+proc removeTree*(bm: Bookmarks, id: cstring): Future[void]
 proc update*(bm: Bookmarks, id: cstring, changes: Changes): Future[BookmarkTreeNode]
 proc getTree*(bm: Bookmarks): Future[seq[BookmarkTreeNode]]
 proc getChildren*(bm: Bookmarks, id: cstring): Future[seq[BookmarkTreeNode]]

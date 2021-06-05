@@ -3,6 +3,7 @@
   "name": "Bookmarks with Pocket",
   "version": "0.1.0",
   "permissions": [
+    "<all_urls>",
     "*://getpocket.com/*",
     "activeTab",
     "alarms",
@@ -54,7 +55,11 @@
   },
   "background": {
     // To see output go about:debbugging -> Inspect addon
-    "scripts": ["dist/background.js"]
+    "scripts": [
+      "dist/background.js"
+      // "tests/test_pocket.js"
+    ]
+    // "page": "background.html"
   },
   "browser_action": {
     "default_title": "Settings"

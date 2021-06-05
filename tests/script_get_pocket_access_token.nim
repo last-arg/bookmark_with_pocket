@@ -114,62 +114,68 @@ proc main() =
   let ext_path = getCurrentDir() & "/tmp/extension.xpi"
   let addon_id = session.firefoxInstallAddon(ext_path, false)
 
-  session.navigate(fmt"about:config")
-  let addons_json_str = session.executeScript(
-    """
-      document.getElementById("about-config-search").value = arguments[0];
-      filterPrefs();
-      // view.selection.currentIndex = 0;
-      // var value = view.getCellText(0, {id:"valueCol"});
-      let result = document.querySelector("#prefs .cell-value").textContent;
-      return result;
-    """,
-  "extensions.webextensions.uuids").getStr()
+  # session.navigate(fmt"about:config")
+  # let addons_json_str = session.executeScript(
+  #   """
+  #     document.getElementById("about-config-search").value = arguments[0];
+  #     filterPrefs();
+  #     // view.selection.currentIndex = 0;
+  #     // var value = view.getCellText(0, {id:"valueCol"});
+  #     let result = document.querySelector("#prefs .cell-value").textContent;
+  #     return result;
+  #   """,
+  # "extensions.webextensions.uuids").getStr()
 
-  let addons = parseJson(addons_json_str)
-  let uuid = addons{addon_id}.getStr()
-  if uuid == "":
-    echo fmt"ERR: Couldn't find key '{addon_id}' in uuids json"
-    session.quit()
-    return
+  # let addons = parseJson(addons_json_str)
+  # let uuid = addons{addon_id}.getStr()
+  # if uuid == "":
+  #   echo fmt"ERR: Couldn't find key '{addon_id}' in uuids json"
+  #   session.quit()
+  #   return
 
   session.navigate(fmt"about:devtools-toolbox?id={addon_id}&type=extension")
 
-  let tab = session.newWindow(WindowKind.wkTab)
-  session.switchToWindow(tab)
-  session.navigate(fmt"moz-extension://{uuid}/blank.html")
+  # let tab = session.newWindow(WindowKind.wkTab)
+  # session.switchToWindow(tab)
+  # session.navigate(fmt"moz-extension://{uuid}/blank.html")
 
-  var do_pocket_login = false
-  let localstorage_file = open("tmp/localstorage.json", mode = fmRead)
-  defer: localstorage_file.close()
-  let content = localstorage_file.readAll()
-  try:
-    let local = parseJson(content)
-    let access_token = local["access_token"].getStr()
-    if access_token.len == 0:
-      raise newException(InvalidAccessToken, "Invalid Pocket access token")
+  # var do_pocket_login = false
+  # let localstorage_file = open("tmp/localstorage.json", mode = fmRead)
+  # defer: localstorage_file.close()
+  # let content = localstorage_file.readAll()
+  # try:
+  #   let local = parseJson(content)
+  #   let access_token = local["access_token"].getStr()
+  #   if access_token.len == 0:
+  #     raise newException(InvalidAccessToken, "Invalid Pocket access token")
 
-    discard session.executeScript(
-      """
-        localStorage.setItem("username", arguments[0]);
-        localStorage.setItem("access_token", arguments[1]);
-      """,
-    local["username"].getStr(), access_token)
-    # session.refresh()
-  except JsonParsingError, InvalidAccessToken:
-    do_pocket_login = true
+  #   discard session.executeScript(
+  #     """
+  #     (async function init(username, access_token) {
+  #       browser.storage.local.set({
+  #         "username": username,
+  #         "access_token": access_token
+  #       });
+  #       localStorage.setItem("username", username);
+  #       localStorage.setItem("access_token", access_token);
+  #     })(arguments[0], arguments[1])
+  #     """,
+  #   local["username"].getStr(), access_token)
+  #   # session.refresh()
+  # except JsonParsingError, InvalidAccessToken:
+  #   do_pocket_login = true
 
-  session.navigate(fmt"moz-extension://{uuid}/index.html")
+  # session.navigate(fmt"moz-extension://{uuid}/index.html")
 
-  if do_pocket_login:
-    echo "Do Pocket login"
-    let pocket_login = session.waitForElement(".login-pocket",
-        timeout = 100).get()
-    pocket_login.click()
-    let main_win = session.currentwindow()
-    authPocket(session, config)
-    session.switchToWindow(main_win)
-    saveLocalStorage(session, localstorage_file)
+  # if do_pocket_login:
+  #   echo "Do Pocket login"
+  #   let pocket_login = session.waitForElement(".login-pocket",
+  #       timeout = 100).get()
+  #   pocket_login.click()
+  #   let main_win = session.currentwindow()
+  #   authPocket(session, config)
+  #   session.switchToWindow(main_win)
+  #   saveLocalStorage(session, localstorage_file)
 
   echo "DONE"
 

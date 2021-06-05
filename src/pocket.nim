@@ -52,6 +52,8 @@ proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
 
 proc fetch*(url: Request): Future[Response] {.
     importcpp: "fetch(#)".}
+proc fetch*(url: cstring): Future[Response] {.
+    importcpp: "fetch(#)".}
 
 proc json*(self: Response): Future[JsObject] {.importjs: "#.$1()".}
 
