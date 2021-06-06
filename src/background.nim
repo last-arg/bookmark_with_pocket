@@ -20,12 +20,6 @@ proc newConfig*(tag_ids: seq[cstring] = @[], tags: seq[TagInfo] = @[],
 
 var config* = newConfig()
 
-# proc setTagsModifiedDates*(): Future[void] {.async.} =
-#   let tags = await browser.bookmarks.getChildren(tags_folder_id)
-#   for tag in tags:
-#     discard config.tags.set(tag.id, TagInfo(
-#         modified: tag.dateGroupModified, title: tag.title))
-
 proc pocketTagId(): Future[cstring] {.async.} =
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   for tag in tags:
@@ -56,30 +50,24 @@ proc updateTagDates*(tags: seq[BookmarkTreeNode]): seq[cstring] =
 
   return r
 
+proc asyncUpdateTagDates(): Future[jsUndefined] {.async.} =
+  let tags = await browser.bookmarks.getChildren(tags_folder_id)
+  discard updateTagDates(tags)
+
 proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   console.log "create bk"
   if bookmark.`type` != "bookmark": return
-  console.log config.tags
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
   console.log "TODO: add pocket link with tags", added_tags
-
-proc asyncUpdateTagDates(): Future[jsUndefined] {.async.} =
-  console.log "Update tags only"
-  let tags = await browser.bookmarks.getChildren(tags_folder_id)
-  discard updateTagDates(tags)
+  # TODO: add link to pocket
+  # TODO: check if any tags need to be added
 
 proc initBackground*() {.async.} =
   let pocket_tag_id = await pocketTagId()
   console.log "pocket_tag_id: " & pocket_tag_id
 
   discard await asyncUpdateTagDates()
-
-  # var c = newJsObject()
-  # c["tag_ids"] = config.tag_ids
-  # discard await browser.storage.local.set(c)
-  # let ti = await browser.storage.local.get("tag_ids".cstring)
-  # console.log "storage.local: ", ti
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
     let tabs_opts = TabCreateProps(url: browser.runtime.getURL("index.html"))
@@ -107,6 +95,7 @@ when isMainModule:
     import balls, jscore
 
     # IMPORTANT: Test functions use global variable 'config'
+
     console.log "BACKGROUND DEBUG BUILD"
 
     # TODO: move Port and its functions
@@ -129,13 +118,12 @@ when isMainModule:
         proc failure(resp: JsObject)
 
         proc success(resp: JsObject) =
-          console.log "PORT MESSAGE"
           port.onMessage.removeListener(success)
           port.onDisconnect.removeListener(failure)
           resolve(resp)
 
         proc failure(resp: JsObject) =
-          console.log "PORT DISCONNECT", resp
+          console.error "PORT DISCONNECT", resp
           port.onMessage.removeListener(success)
           port.onDisconnect.removeListener(failure)
           resolve(nil)
@@ -152,31 +140,50 @@ when isMainModule:
           parentId = tags_folder_id)
       let tag = await browser.bookmarks.create(details)
 
+    proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
+      var r: seq[cstring] = @[]
+      for tag in tags:
+        let id_index = find[seq[cstring], cstring](config.tag_ids, tag.id)
+        if id_index == -1:
+          r.add(tag.title)
+        elif tag.dateGroupModified != config.tags[id_index].modified:
+          r.add(tag.title)
+
+      return r
+
+    proc getAddedTagsAsync(): Future[seq[cstring]] {.async.} =
+      let tags = await browser.bookmarks.getChildren(tags_folder_id)
+      return getAddedTags(tags)
 
     var created_bk_ids = newSeq[cstring]()
     proc runTestsImpl() {.async.} =
       console.info "Run tests"
       let p = browser.runtime.connectNative("sqlite_update")
-      console.log p
 
       suite "pocket":
         let storage_obj = await browser.storage.local.get(
             "access_token".cstring)
         block pocket_access_token:
-          assert storage_obj.hasOwnProperty("access_token")
+          check storage_obj.hasOwnProperty("access_token"), "'access_token' was not found in extension local storage"
 
         block add_bookmark:
-          console.log config.tags
           let msg = await sendPortMessage(p, "tag_inc|pocket,video")
-          console.log "native message: " & cast[cstring](msg)
+          check msg != nil, "Can't connnect to sqlite_update native application"
 
-          console.log config.tags
+          let added_tags = await getAddedTagsAsync()
+          console.log added_tags
+          check added_tags.len == 2, "Wrong count of added tags"
+          check "pocket" in added_tags, "'pocket' tag was not found in added tags"
+          check "video" in added_tags, "'video' tag was not found in added tags"
+
           let detail = newCreateDetails(title = "Google",
               url = "https://google.com")
           let bk1 = await browser.bookmarks.create(detail)
           created_bk_ids.add(bk1.id)
 
-        p.disconnect()
+          # TODO: check that link was added to pocket
+
+      p.disconnect()
 
     proc setup() {.async.} =
       console.info "Tests setup"
@@ -199,7 +206,9 @@ when isMainModule:
       console.info "Start test suite"
       await setup()
       await initBackground()
-      await runTestsImpl()
-      await cleanup()
+      try:
+        await runTestsImpl()
+      finally:
+        await cleanup()
 
     discard runTestSuite()

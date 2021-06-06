@@ -20,8 +20,7 @@ watch-geckodriver:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext && just geckodriver'
 
 web-ext:
-  web-ext run -i **/*.nim tmp/ src/ tests/ node_modules/ nimcache/ native-messaging/ --pref=storage.sqlite.exclusiveLock.enabled=false --bc
-  # -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
+  web-ext run --watch-file dist/background.js --pref=storage.sqlite.exclusiveLock.enabled=false -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
 
 setup-native-messaging:
   # requires sqlite3
