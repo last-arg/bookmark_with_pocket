@@ -70,11 +70,6 @@ proc asyncUpdateTagDates(): Future[jsUndefined] {.async.} =
   discard updateTagDates(tags)
 
 proc initBackground*() {.async.} =
-  when not defined(release):
-    console.log "BACKGROUND DEBUG BUILD"
-  else:
-    console.log "BACKGROUND RELEASE BUILD"
-
   let pocket_tag_id = await pocketTagId()
   console.log "pocket_tag_id: " & pocket_tag_id
 
@@ -105,11 +100,13 @@ proc initBackground*() {.async.} =
 
 when isMainModule:
   when defined(release):
+    console.log "BACKGROUND RELEASE BUILD"
     discard initBackground()
 
   when not defined(release):
     import balls, jscore
 
+    console.log "BACKGROUND DEBUG BUILD"
 
     # IMPORTANT: Test functions use global variable 'config'
     var created_bk_ids = newSeq[cstring]()
