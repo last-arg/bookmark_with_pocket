@@ -1,7 +1,8 @@
 node_modules/
+bin/
 .direnv/
-.envrc
 tmp/
 nimcache/
+.envrc
 *.js
 tests/script_*

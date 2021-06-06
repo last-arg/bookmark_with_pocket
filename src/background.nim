@@ -106,17 +106,8 @@ when isMainModule:
   when not defined(release):
     import balls, jscore
 
-    console.log "BACKGROUND DEBUG BUILD"
-
     # IMPORTANT: Test functions use global variable 'config'
-    var created_bk_ids = newSeq[cstring]()
-    proc runTests() {.async.}
-    discard runTests()
-
-    proc createTag(name: cstring): Future[void] {.async.} =
-      let details = newCreateDetails(title = name, `type` = "folder",
-          parentId = tags_folder_id)
-      let tag = await browser.bookmarks.create(details)
+    console.log "BACKGROUND DEBUG BUILD"
 
     # TODO: move Port and its functions
     type
@@ -156,6 +147,13 @@ when isMainModule:
       return promise
 
 
+    proc createTag(name: cstring): Future[void] {.async.} =
+      let details = newCreateDetails(title = name, `type` = "folder",
+          parentId = tags_folder_id)
+      let tag = await browser.bookmarks.create(details)
+
+
+    var created_bk_ids = newSeq[cstring]()
     proc runTestsImpl() {.async.} =
       console.info "Run tests"
       let p = browser.runtime.connectNative("sqlite_update")
@@ -178,7 +176,7 @@ when isMainModule:
           let bk1 = await browser.bookmarks.create(detail)
           created_bk_ids.add(bk1.id)
 
-      p.disconnect()
+        p.disconnect()
 
     proc setup() {.async.} =
       console.info "Tests setup"
@@ -197,10 +195,11 @@ when isMainModule:
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)
 
-    proc runTests() {.async.} =
+    proc runTestSuite() {.async.} =
       console.info "Start test suite"
       await setup()
       await initBackground()
       await runTestsImpl()
       await cleanup()
 
+    discard runTestSuite()
