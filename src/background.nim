@@ -1,6 +1,7 @@
 import dom, jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks
+import results
 import pocket
 
 type
@@ -12,12 +13,17 @@ type
   ConfigObj = object
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
-    add_to_pocket_tags*: seq[cstring]
-    # TODO: add field that contains TAGS that add link to pocket
+    local_data: LocalData
 
-proc newConfig*(tag_ids: seq[cstring] = @[], tags: seq[TagInfo] = @[],
-    add_to_pocket_tags: seq[cstring] = @[]): Config =
-  Config(tag_ids: tag_ids, tags: tags, add_to_pocket_tags: add_to_pocket_tags)
+  LocalData* = ref object
+    access_token*: cstring
+    username*: cstring
+    add_to_pocket_tags*: seq[cstring]
+
+proc newConfig*(access_token: cstring = "", tag_ids: seq[cstring] = @[],
+    tags: seq[TagInfo] = @[]): Config =
+  let local_data = LocalData(access_token: "", add_to_pocket_tags: @[])
+  Config(tag_ids: tag_ids, tags: tags, local_data: local_data)
 
 var config = newConfig()
 
@@ -45,11 +51,12 @@ proc asyncUpdateTagDates(): Future[jsUndefined] {.async.} =
   discard updateTagDates(tags)
 
 proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
-  console.log "create bk"
   if bookmark.`type` != "bookmark": return
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
   console.log "TODO: add pocket link with tags", added_tags
+  console.log bookmark
+  # await addLink(bookmark.url, config.access_token)
   # TODO: add link to pocket
   # TODO: check if any tags need to be added
 
@@ -59,8 +66,21 @@ const config_fields = block:
     fields.add(c)
   fields
 
+const default_add_to_pocket_tag = "pocket".cstring
 proc initBackground*() {.async.} =
   discard await asyncUpdateTagDates()
+
+  let storage = await browser.storage.local.get("local_data".cstring)
+  if storage.hasOwnProperty("local_data"):
+    let local_data = cast[LocalData](storage["local_data"])
+    if not isUndefined(local_data.access_token) and
+        local_data.access_token.len > 0:
+      config.local_data = local_data
+    else:
+      console.warn "No 'access_token' found"
+  else:
+    console.warn "No 'local_data' in browser.storage.local"
+
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
     let tabs_opts = TabCreateProps(url: browser.runtime.getURL("index.html"))
@@ -154,10 +174,8 @@ when isMainModule:
       let p = browser.runtime.connectNative("sqlite_update")
 
       suite "pocket":
-        let storage_obj = await browser.storage.local.get(
-            "access_token".cstring)
         block pocket_access_token:
-          check storage_obj.hasOwnProperty("access_token"), "'access_token' was not found in extension local storage"
+          check config.local_data.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
           let msg = await sendPortMessage(p, "tag_inc|pocket,video")
@@ -178,12 +196,13 @@ when isMainModule:
       p.disconnect()
 
     proc setup() {.async.} =
-
       console.info "Tests setup"
       config = newConfig()
       const json_str = staticRead("../tmp/localstorage.json")
-      let local_data = cast[JsObject](JSON.parse(json_str))
-      discard await browser.storage.local.set(local_data)
+      let local_value = cast[JsObject](JSON.parse(json_str))
+      let local_obj = newJsObject()
+      local_obj["local_data"] = local_value
+      discard await browser.storage.local.set(local_obj)
       await createTag("pocket")
       await createTag("book")
       await createTag("hello")
@@ -195,6 +214,7 @@ when isMainModule:
         await browser.bookmarks.remove(id)
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)
+      await browser.storage.local.clear()
 
     proc runTestSuite() {.async.} =
       console.info "Start test suite"
