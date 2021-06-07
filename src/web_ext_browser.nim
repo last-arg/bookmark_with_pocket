@@ -55,9 +55,9 @@ proc getURL*(runtime: Runtime, url: cstring): cstring
 proc addListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
 
 proc set*(storage_type: Local, keys: JsObject): Future[jsUndefined]
-proc clear*(storage_type: Local): Future[void]
 proc get*(storage_type: Local, keys: JsObject | cstring | seq[cstring]): Future[
     JsObject] # Can return undefined
+proc clear*(storage_type: Local): Future[void]
 
 proc addListener*(obj: StorageOnChanged, cb: proc(changes: JsObject,
     area_name: cstring))

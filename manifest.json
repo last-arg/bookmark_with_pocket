@@ -55,11 +55,11 @@
   },
   "background": {
     // To see output go about:debbugging -> Inspect addon
-    "scripts": [
-      "dist/background.js"
+    // "scripts": [
+    //   "dist/background.js"
       // "tests/test_pocket.js"
-    ]
-    // "page": "background.html"
+    // ]
+    "page": "background.html"
   },
   "browser_action": {
     "default_title": "Settings"

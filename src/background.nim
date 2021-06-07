@@ -8,28 +8,18 @@ type
     modified*: int
     title*: cstring
 
-  Config* = ref object
+  Config* = ref ConfigObj
+  ConfigObj = object
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
+    add_to_pocket_tags*: seq[cstring]
     # TODO: add field that contains TAGS that add link to pocket
-    pocket_tag_id*: cstring
 
 proc newConfig*(tag_ids: seq[cstring] = @[], tags: seq[TagInfo] = @[],
-    pocket_tag_id: cstring = ""): Config =
-  Config(tag_ids: tag_ids, tags: tags, pocket_tag_id: pocket_tag_id)
+    add_to_pocket_tags: seq[cstring] = @[]): Config =
+  Config(tag_ids: tag_ids, tags: tags, add_to_pocket_tags: add_to_pocket_tags)
 
-var config* = newConfig()
-
-proc pocketTagId(): Future[cstring] {.async.} =
-  let tags = await browser.bookmarks.getChildren(tags_folder_id)
-  for tag in tags:
-    if tag.title == pocket_add_folder:
-      return tag.id
-
-  let details = newCreateDetails(title = pocket_add_folder, `type` = "folder",
-      parentId = tags_folder_id)
-  let tag = await browser.bookmarks.create(details)
-  return tag.id
+var config = newConfig()
 
 proc updateTagDates*(tags: seq[BookmarkTreeNode]): seq[cstring] =
   var r: seq[cstring] = @[]
@@ -63,10 +53,13 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   # TODO: add link to pocket
   # TODO: check if any tags need to be added
 
-proc initBackground*() {.async.} =
-  let pocket_tag_id = await pocketTagId()
-  console.log "pocket_tag_id: " & pocket_tag_id
+const config_fields = block:
+  var fields: seq[cstring] = @["no".cstring]
+  for c, t in ConfigObj().fieldPairs():
+    fields.add(c)
+  fields
 
+proc initBackground*() {.async.} =
   discard await asyncUpdateTagDates()
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
@@ -171,7 +164,6 @@ when isMainModule:
           check msg != nil, "Can't connnect to sqlite_update native application"
 
           let added_tags = await getAddedTagsAsync()
-          console.log added_tags
           check added_tags.len == 2, "Wrong count of added tags"
           check "pocket" in added_tags, "'pocket' tag was not found in added tags"
           check "video" in added_tags, "'video' tag was not found in added tags"
@@ -186,11 +178,13 @@ when isMainModule:
       p.disconnect()
 
     proc setup() {.async.} =
+
       console.info "Tests setup"
       config = newConfig()
       const json_str = staticRead("../tmp/localstorage.json")
       let local_data = cast[JsObject](JSON.parse(json_str))
       discard await browser.storage.local.set(local_data)
+      await createTag("pocket")
       await createTag("book")
       await createTag("hello")
       await createTag("video")
@@ -203,6 +197,7 @@ when isMainModule:
         await browser.bookmarks.remove(id)
 
     proc runTestSuite() {.async.} =
+      console.info "Start test suite"
       console.info "Start test suite"
       await setup()
       await initBackground()
