@@ -19,7 +19,7 @@ watch-build-background:
 watch-geckodriver:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext && just geckodriver'
 
-web-ext:
+web-ext: build-background
   web-ext run --watch-file dist/background.js --pref=storage.sqlite.exclusiveLock.enabled=false -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
 
 setup-native-messaging:

@@ -57,7 +57,7 @@
     // To see output go about:debbugging -> Inspect addon
     // "scripts": [
     //   "dist/background.js"
-      // "tests/test_pocket.js"
+    //   // "tests/test_pocket.js"
     // ]
     "page": "background.html"
   },
