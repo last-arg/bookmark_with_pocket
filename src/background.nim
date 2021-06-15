@@ -175,47 +175,10 @@ when isMainModule:
     discard initBackground()
 
   when defined(testing):
-    import balls, jscore
+    import balls, jscore, web_ext_browser
 
     # IMPORTANT: Test functions use global variable 'config'
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
-
-    # TODO: move Port and its functions
-    type
-      Port* = ref PortObj
-      PortObj {.importjs.} = object
-        onMessage*: PortEvent
-        onDisconnect*: PortEvent
-
-      PortEvent = ref object
-
-    proc addListener(obj: PortEvent, cb: proc(resp: JsObject)) {.importcpp.}
-    proc removeListener(obj: PortEvent, cb: proc(resp: JsObject)) {.importcpp.}
-    proc disconnect(port: Port) {.importcpp.}
-    proc connectNative(r: Runtime, app: cstring): Port {.importcpp.}
-    proc postMessage(port: Port, msg: cstring) {.importcpp.}
-    proc sendPortMessage*(port: Port, msg: cstring): Future[JsObject] =
-      var promise = newPromise(proc(resolve: proc(resp: JsObject)) =
-        proc success(resp: JsObject)
-        proc failure(resp: JsObject)
-
-        proc success(resp: JsObject) =
-          port.onMessage.removeListener(success)
-          port.onDisconnect.removeListener(failure)
-          resolve(resp)
-
-        proc failure(resp: JsObject) =
-          console.error "PORT DISCONNECT", resp
-          port.onMessage.removeListener(success)
-          port.onDisconnect.removeListener(failure)
-          resolve(nil)
-
-        port.onMessage.addListener(success)
-        port.onDisconnect.addListener(failure)
-      )
-      port.postMessage(msg)
-      return promise
-
 
     proc createTag(name: cstring): Future[void] {.async.} =
       let details = newCreateDetails(title = name, `type` = "folder",
@@ -260,7 +223,6 @@ when isMainModule:
       return p
 
     var created_bk_ids = newSeq[cstring]()
-
     proc testAddBookMark() {.async.} =
       let p = browser.runtime.connectNative("sqlite_update")
       const url_to_add = "https://google.com"

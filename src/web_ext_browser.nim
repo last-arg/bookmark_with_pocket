@@ -46,6 +46,14 @@ type
   TabCreatePropsObj = object
     url*: cstring
 
+  Port* = ref PortObj
+  PortObj {.importjs.} = object
+    onMessage*: PortEvent
+    onDisconnect*: PortEvent
+
+  PortEvent = ref object
+
+
 var browser* {.importjs, nodecl.}: Browser
 
 {.push importcpp.}
@@ -67,4 +75,34 @@ proc sendMessage*(r: Runtime, id: cstring, obj: JsObject | cstring): Future[JsOb
 proc addListener*(r: RuntimeOnMessage, cb: proc(msg: JsObject, sender: JsObject,
     cb: proc(msg: Future[JsObject])))
 
+proc addListener*(obj: PortEvent, cb: proc(resp: JsObject))
+proc removeListener*(obj: PortEvent, cb: proc(resp: JsObject))
+proc disconnect*(port: Port)
+proc connectNative*(r: Runtime, app: cstring): Port
+proc postMessage(port: Port, msg: cstring)
 {.pop importcpp.}
+
+
+# Wrapper for postMessage function
+proc sendPortMessage*(port: Port, msg: cstring): Future[JsObject] =
+  var promise = newPromise(proc(resolve: proc(resp: JsObject)) =
+    proc success(resp: JsObject)
+    proc failure(resp: JsObject)
+
+    proc success(resp: JsObject) =
+      port.onMessage.removeListener(success)
+      port.onDisconnect.removeListener(failure)
+      resolve(resp)
+
+    proc failure(resp: JsObject) =
+      port.onMessage.removeListener(success)
+      port.onDisconnect.removeListener(failure)
+      resolve(nil)
+
+    port.onMessage.addListener(success)
+    port.onDisconnect.addListener(failure)
+  )
+  port.postMessage(msg)
+  return promise
+
+
