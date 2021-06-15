@@ -180,10 +180,11 @@ when isMainModule:
     # IMPORTANT: Test functions use global variable 'config'
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
 
-    proc createTag(name: cstring): Future[void] {.async.} =
-      let details = newCreateDetails(title = name, `type` = "folder",
-          parentId = tags_folder_id)
-      let tag = await browser.bookmarks.create(details)
+    proc createTags(tags: seq[cstring]): Future[void] {.async.} =
+      for tag in tags:
+        let details = newCreateDetails(title = tag, `type` = "folder",
+            parentId = tags_folder_id)
+        let tag = await browser.bookmarks.create(details)
 
     proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
       var r: seq[cstring] = @[]
@@ -306,7 +307,6 @@ when isMainModule:
 
     proc runTestsImpl() {.async.} =
       console.info "Run tests"
-
       suite "background":
         block filter_tags:
           testFilterTags()
@@ -326,11 +326,8 @@ when isMainModule:
       let local_obj = newJsObject()
       local_obj.local = local_value
       discard await browser.storage.local.set(local_obj)
-      await createTag("pocket")
-      await createTag("book")
-      await createTag("hello")
-      await createTag("video")
-      await createTag("discard_tag")
+      await createTags(@["pocket".cstring, "book", "hello", "video",
+          "discard_tag"])
 
     proc cleanup() {.async.} =
       console.info "Tests cleanup"

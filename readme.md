@@ -12,5 +12,4 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
 
 # TODO
- [ ] Replace localStorage with [storage API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/storage)
  [ ] ctrl + d -> updateTagDates()
