@@ -13,7 +13,7 @@ type
   ConfigObj = object
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
-    local_data: LocalData
+    local: LocalData
 
   LocalData* = ref object
     access_token*: cstring
@@ -35,14 +35,14 @@ proc newConfig*(
     allowed_tags: seq[seq[cstring]] = @[],
     discard_tags: seq[seq[cstring]] = @[],
   ): Config =
-  let local_data = LocalData(access_token: "",
+  let local = LocalData(access_token: "",
       username: username,
       always_add: always_add,
       add_tags: add_tags,
       no_add_tags: no_add_tags,
       allowed_tags: allowed_tags,
       discard_tags: discard_tags)
-  Config(tag_ids: tag_ids, tags: tags, local_data: local_data)
+  Config(tag_ids: tag_ids, tags: tags, local: local)
 
 var config = newConfig()
 when not defined(release):
@@ -116,16 +116,16 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
 
-  if hasNoAddTag(added_tags, config.local_data.no_add_tags):
+  if hasNoAddTag(added_tags, config.local.no_add_tags):
     return
 
-  if config.local_data.always_add or hasAddTag(added_tags,
-      config.local_data.add_tags):
-    let filtered_tags = filterTags(added_tags, config.local_data.allowed_tags,
-        config.local_data.discard_tags)
+  if config.local.always_add or hasAddTag(added_tags,
+      config.local.add_tags):
+    let filtered_tags = filterTags(added_tags, config.local.allowed_tags,
+        config.local.discard_tags)
     if true: return
     let link_result = await addLink(bookmark.url,
-        config.local_data.access_token, filtered_tags)
+        config.local.access_token, filtered_tags)
     if link_result.isErr():
       console.log "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
@@ -140,17 +140,17 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
 proc initBackground*() {.async.} =
   discard await asyncUpdateTagDates()
 
-  let storage = await browser.storage.local.get("local_data".cstring)
-  if storage.hasOwnProperty("local_data"):
-    let local_data = cast[LocalData](storage["local_data"])
-    if not isUndefined(local_data.access_token) and
-        local_data.access_token.len > 0:
-      config.local_data.access_token = local_data.access_token
-      config.local_data.username = local_data.username
+  let storage = await browser.storage.local.get("local".cstring)
+  if storage.hasOwnProperty("local"):
+    let local = cast[LocalData](storage["local"])
+    if not isUndefined(local.access_token) and
+        local.access_token.len > 0:
+      config.local.access_token = local.access_token
+      config.local.username = local.username
     else:
       console.warn "No 'access_token' found"
   else:
-    console.warn "No 'local_data' in browser.storage.local"
+    console.warn "No 'local' in browser.storage.local"
 
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
@@ -264,7 +264,7 @@ when isMainModule:
     var created_bk_ids = newSeq[cstring]()
 
     proc testAddBookMark() {.async.} =
-      # config.local_data.discard_tags.add("wont_add".cstring)
+      # config.local.discard_tags.add("wont_add".cstring)
       # TODO: always add bookmark to pocket
       # config.always_add = true
 
@@ -296,7 +296,7 @@ when isMainModule:
       check status == 1, "pocket_link status failed"
 
       # Check that link was added to pocket
-      let links_result = await retrieveLinks(config.local_data.access_token,
+      let links_result = await retrieveLinks(config.local.access_token,
           url_to_add)
       check links_result.isOk()
       let links = links_result.value()
@@ -315,7 +315,7 @@ when isMainModule:
       var action = newJsObject()
       action["action"] = "delete".cstring
       action["item_id"] = link_id
-      let del_result = await modifyLink(config.local_data.access_token, action)
+      let del_result = await modifyLink(config.local.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
       let del_status = cast[int](del_value.status)
@@ -334,7 +334,7 @@ when isMainModule:
 
       # Make sure pocket link was deleted
       let links_empty_result = await retrieveLinks(
-          config.local_data.access_token, url_to_add)
+          config.local.access_token, url_to_add)
       check links_empty_result.isOk()
       let links_empty = links_empty_result.value()
       let list_empty = cast[seq[JsObject]](links_empty.list)
@@ -364,7 +364,7 @@ when isMainModule:
           testFilterTags()
 
         block pocket_access_token:
-          check config.local_data.access_token.len > 0, "'access_token' was not found in extension local storage"
+          check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         # block add_bookmark:
         #   await testAddBookMark()
@@ -376,7 +376,7 @@ when isMainModule:
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
       let local_obj = newJsObject()
-      local_obj["local_data"] = local_value
+      local_obj["local"] = local_value
       discard await browser.storage.local.set(local_obj)
       await createTag("pocket")
       await createTag("book")
