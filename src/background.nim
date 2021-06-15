@@ -45,7 +45,7 @@ proc newConfig*(
   Config(tag_ids: tag_ids, tags: tags, local: local)
 
 var config = newConfig()
-when not defined(release):
+when defined(testing):
   var pocket_link: JsObject = nil
 
 
@@ -123,7 +123,6 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
       config.local.add_tags):
     let filtered_tags = filterTags(added_tags, config.local.allowed_tags,
         config.local.discard_tags)
-    if true: return
     let link_result = await addLink(bookmark.url,
         config.local.access_token, filtered_tags)
     if link_result.isErr():
@@ -134,7 +133,7 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
     # console.log link_result.value()
     # TODO: indicate success in extension badge
 
-    when not defined(release):
+    when defined(testing):
       pocket_link = link_result.value()
 
 proc initBackground*() {.async.} =
@@ -175,12 +174,11 @@ when isMainModule:
     console.log "BACKGROUND RELEASE BUILD"
     discard initBackground()
 
-  when not defined(release):
+  when defined(testing):
     import balls, jscore
 
     # IMPORTANT: Test functions use global variable 'config'
-
-    console.log "BACKGROUND DEBUG BUILD"
+    console.log "BACKGROUND TESTING(DEBUG) BUILD"
 
     # TODO: move Port and its functions
     type
@@ -264,25 +262,17 @@ when isMainModule:
     var created_bk_ids = newSeq[cstring]()
 
     proc testAddBookMark() {.async.} =
-      # config.local.discard_tags.add("wont_add".cstring)
-      # TODO: always add bookmark to pocket
-      # config.always_add = true
-
       let p = browser.runtime.connectNative("sqlite_update")
       const url_to_add = "https://google.com"
-      let msg = await sendPortMessage(p, "tag_inc|pocket,video,wont_add")
+      let msg = await sendPortMessage(p, "tag_inc|pocket,video,discard_tag")
       check msg != nil, "Can't connnect to sqlite_update native application"
 
-      # TODO: Don't add bookmark to pocket if one of these tags is found
-      # config.add_tags: add_tags
-      # config.allowed_tags: allowed_tags
-      # config.discard_tags: discard_tags
+      config.local.discard_tags.add(@[@["discard_tag".cstring], @[
+          "pocket".cstring]])
 
-      # tags that are going to be added
+      # tags that are part of bookmark
       let added_tags = await getAddedTagsAsync()
-      check added_tags.len == 2, "Wrong count of added tags"
-      check "pocket" in added_tags, "'pocket' tag was not found in added tags"
-      check "video" in added_tags, "'video' tag was not found in added tags"
+      check added_tags.len == 3, "Wrong count of added tags"
 
       # Add bookmark and pocket link
       let detail = newCreateDetails(title = "Google",
@@ -291,7 +281,7 @@ when isMainModule:
       created_bk_ids.add(bk1.id)
 
       let link_added = await waitForPocketLink()
-      check link_added, "Could not get added pocket link"
+      check link_added, "Could not get added pocket link. Either test timed out because adding link was taking too long or adding link failed on pocket side."
       let status = cast[int](pocket_link.status)
       check status == 1, "pocket_link status failed"
 
@@ -304,17 +294,16 @@ when isMainModule:
       let has_added_url = links.list.hasOwnProperty(link_key)
       check has_added_url, "Could not find added link '" & url_to_add & "'"
 
-      var link_tags: seq[cstring] = @[]
-      for tag_key in links.list[link_key].tags.keys():
-        link_tags.add(tag_key)
-      check "pocket" in link_tags
-      check "video" in link_tags
+      let link_tags = links.list[link_key].tags
+      var tags_len = 0
+      for _ in link_tags.keys(): tags_len += 1
+      check tags_len == 1
+      check link_tags.hasOwnProperty("video")
 
       # Delete pocket item
-      const link_id = "2148956".cstring
       var action = newJsObject()
       action["action"] = "delete".cstring
-      action["item_id"] = link_id
+      action["item_id"] = link_key
       let del_result = await modifyLink(config.local.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
@@ -323,14 +312,11 @@ when isMainModule:
       let del_results = cast[seq[bool]](del_value.action_results)
       check del_results[0]
 
-      # TODO: tests that add bookmark but not pocket link
-      # 1.
-      # config.no_add_tags can cancel adding bookmark to pocket even if
-      # config.always_add = true
-      #
-      # 2.
-      # config.no_add_tags is found
-      # config.always_add and/or config.add_tags
+      # Add bookmark only (no pocket link)
+      discard await sendPortMessage(p, "tag_inc|music,book,no-pocket")
+      let bk2 = await browser.bookmarks.create(
+        newCreateDetails(title = "Google", url = url_to_add))
+      created_bk_ids.add(bk2.id)
 
       # Make sure pocket link was deleted
       let links_empty_result = await retrieveLinks(
@@ -366,8 +352,8 @@ when isMainModule:
         block pocket_access_token:
           check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
 
-        # block add_bookmark:
-        #   await testAddBookMark()
+        block add_bookmark:
+          await testAddBookMark()
 
 
     proc setup() {.async.} =
@@ -376,12 +362,13 @@ when isMainModule:
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
       let local_obj = newJsObject()
-      local_obj["local"] = local_value
+      local_obj.local = local_value
       discard await browser.storage.local.set(local_obj)
       await createTag("pocket")
       await createTag("book")
       await createTag("hello")
       await createTag("video")
+      await createTag("discard_tag")
 
     proc cleanup() {.async.} =
       console.info "Tests cleanup"
@@ -391,7 +378,7 @@ when isMainModule:
         await browser.bookmarks.remove(id)
       await browser.storage.local.clear()
 
-    proc runTestSuite() {.async.} =
+    proc runTestSuite() {.async, discardable.} =
       console.info "Start test suite"
       await setup()
       await initBackground()
@@ -400,4 +387,4 @@ when isMainModule:
       finally:
         await cleanup()
 
-    discard runTestSuite()
+    runTestSuite()

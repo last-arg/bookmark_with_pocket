@@ -1,5 +1,5 @@
 build-background:
-  nim js src/background.nim
+  nim js -d:testing src/background.nim
 
 geckodriver: build-ext
   nim c --threads:on -d:ssl -r tests/script_get_pocket_access_token.nim
