@@ -39,6 +39,7 @@ type
 
   Tab* = ref TabObj
   TabObj {.importjs.} = object
+    id*: int
     url*: cstring
     title*: cstring
 
@@ -46,10 +47,30 @@ type
   TabCreatePropsObj = object
     url*: cstring
 
+  TabQuery* = ref TabQueryObj
+  TabQueryObj = object
+    active*: bool
+    currentWindow*: bool
+
   Port* = ref PortObj
   PortObj {.importjs.} = object
     onMessage*: PortEvent
     onDisconnect*: PortEvent
+
+  BadgeText* = ref BadgeTextObj
+  BadgeTextObj = object
+    text*: cstring
+    tabId*: int
+
+  BadgeBgColor* = ref BadgeBgColorObj
+  BadgeBgColorObj = object
+    color*: cstring
+    tabId*: int
+
+  BadgeTextColor* = ref BadgeTextColorObj
+  BadgeTextColorObj = object
+    color*: cstring
+    tabId*: int
 
   PortEvent = ref object
 
@@ -59,8 +80,16 @@ var browser* {.importjs, nodecl.}: Browser
 {.push importcpp.}
 
 proc create*(tabs: Tabs, props: TabCreateProps): Future[BookmarkTreeNode]
+
+proc query*(tabs: Tabs, query_obj: TabQuery): Future[seq[Tab]]
+
 proc getURL*(runtime: Runtime, url: cstring): cstring
 proc addListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
+
+proc setIcon*(ba: BrowserAction, details: JsObject): Future[void]
+proc setBadgeText*(ba: BrowserAction, details: BadgeText)
+proc setBadgeBackgroundColor*(ba: BrowserAction, details: BadgeBgColor)
+proc setBadgeTextColor*(ba: BrowserAction, details: BadgeTextColor)
 
 proc set*(storage_type: Local, keys: JsObject): Future[jsUndefined]
 proc get*(storage_type: Local, keys: JsObject | cstring | seq[cstring]): Future[

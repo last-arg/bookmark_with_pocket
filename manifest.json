@@ -61,6 +61,10 @@
     // ]
     "page": "background.html"
   },
+  "icons": {
+    "48": "assets/badge.svg",
+    "96": "assets/badge.svg"
+  },
   "browser_action": {
     "default_title": "Settings"
   }

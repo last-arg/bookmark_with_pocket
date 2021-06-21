@@ -48,6 +48,11 @@ var config = newConfig()
 when defined(testing):
   var pocket_link: JsObject = nil
 
+let empty_badge = newJsObject()
+empty_badge["path"] = "./assets/badge_empty.svg".cstring
+
+let badge = newJsObject()
+badge["path"] = "./assets/badge.svg".cstring
 
 proc filter*[T](arr: seq[T], fn: (proc(item: T): bool)): seq[T] {.
     importjs: "#.filter(#)".}
@@ -110,9 +115,39 @@ proc hasAddTag*(tags: seq[cstring], add_tags: seq[seq[cstring]]): bool =
     if add: return true
   return false
 
+proc setBadgeLoading(tab_id: int) =
+  browser.browserAction.setBadgeBackgroundColor(
+    BadgeBgColor(color: "#BFDBFE", tabId: tab_id))
+  browser.browserAction.setBadgeTextColor(
+    BadgeTextColor(color: "#000000", tabId: tab_id))
+  browser.browserAction.setBadgeText(BadgeText(text: "...", tabId: tab_id))
+
+proc setBadgeFailed(tab_id: int) =
+  browser.browserAction.setBadgeBackgroundColor(
+    BadgeBgColor(color: "#FCA5A5", tabId: tab_id))
+  browser.browserAction.setBadgeTextColor(
+    BadgeTextColor(color: "#000000", tabId: tab_id))
+  browser.browserAction.setBadgeText(BadgeText(text: "fail", tabId: tab_id))
+
+proc setBadgeNone(tab_id: int) =
+  let text_detail = BadgeText(text: "", tabId: tab_id)
+  browser.browserAction.setBadgeText(text_detail)
+  badge["tabId"] = tab_id
+  discard browser.browserAction.setIcon(empty_badge)
+
+proc setBadgeSuccess(tab_id: int) =
+  let text_detail = BadgeText(text: "", tabId: tab_id)
+  browser.browserAction.setBadgeText(text_detail)
+  badge["tabId"] = tab_id
+  discard browser.browserAction.setIcon(badge)
+
 proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
-  # TODO?: indicate link addin to Pocket in extension badge
+  let query_tabs = await browser.tabs.query(
+    TabQuery(active: true, currentWindow: true))
+  let tab_id = query_tabs[0].id
+  setBadgeNone(tab_id)
+
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
 
@@ -121,22 +156,24 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
 
   if config.local.always_add or hasAddTag(added_tags,
       config.local.add_tags):
+    setBadgeLoading(tab_id)
     let filtered_tags = filterTags(added_tags, config.local.allowed_tags,
         config.local.discard_tags)
     let link_result = await addLink(bookmark.url,
         config.local.access_token, filtered_tags)
     if link_result.isErr():
-      console.log "Failed to add bookmark to Pocket. Error type: " &
+      console.error "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
-      # TODO: indicate failure in extension badge
+      setBadgeFailed(tab_id)
       return
-    # console.log link_result.value()
-    # TODO: indicate success in extension badge
+
+    setBadgeSuccess(tab_id)
 
     when defined(testing):
       pocket_link = link_result.value()
 
 proc initBackground*() {.async.} =
+  discard browser.browserAction.setIcon(empty_badge)
   discard await asyncUpdateTagDates()
 
   let storage = await browser.storage.local.get("local".cstring)
@@ -157,19 +194,20 @@ proc initBackground*() {.async.} =
     discard browser.tabs.create(tabs_opts)
   )
 
-  browser.bookmarks.onCreated.addListener(proc(id: cstring,
-      bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
-  )
+  browser.bookmarks.onCreated.addListener(
+    proc(id: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark))
 
-  browser.bookmarks.onChanged.addListener(proc(id: cstring,
-      obj: JsObject) = discard asyncUpdateTagDates())
+  browser.bookmarks.onChanged.addListener(
+    proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
 
-  browser.bookmarks.onRemoved.addListener(proc(id: cstring,
-      obj: JsObject) = discard asyncUpdateTagDates())
+  browser.bookmarks.onRemoved.addListener(
+    proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
 
   return
 
 when isMainModule:
+
+
   when defined(release):
     console.log "BACKGROUND RELEASE BUILD"
     discard initBackground()
@@ -306,6 +344,7 @@ when isMainModule:
 
 
     proc runTestsImpl() {.async.} =
+
       console.info "Run tests"
       suite "background":
         block filter_tags:
@@ -315,6 +354,7 @@ when isMainModule:
           check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
+          # skip()
           await testAddBookMark()
 
 
