@@ -55,11 +55,10 @@
   },
   "background": {
     // To see output go about:debbugging -> Inspect addon
-    // "scripts": [
-    //   "dist/background.js"
-    //   // "tests/test_pocket.js"
-    // ]
-    "page": "background.html"
+    "scripts": [
+      "dist/background.js"
+    ],
+    "persistent": true
   },
   "icons": {
     "48": "assets/badge.svg",
@@ -67,6 +66,11 @@
   },
   "browser_action": {
     "default_title": "Settings"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "browser_style": true,
+    "open_in_tab": true
   }
   // "content_scripts": [
   //   {

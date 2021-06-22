@@ -354,7 +354,7 @@ when isMainModule:
           check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
-          # skip()
+          skip()
           await testAddBookMark()
 
 
