@@ -51,6 +51,7 @@ type
   TabQueryObj = object
     active*: bool
     currentWindow*: bool
+    url*: cstring
 
   Port* = ref PortObj
   PortObj {.importjs.} = object
@@ -81,7 +82,8 @@ var browser* {.importjs, nodecl.}: Browser
 
 proc create*(tabs: Tabs, props: TabCreateProps): Future[BookmarkTreeNode]
 
-proc query*(tabs: Tabs, query_obj: TabQuery): Future[seq[Tab]]
+proc query*(tabs: Tabs, query_obj: JsObject): Future[seq[Tab]]
+proc reload*(tabs: Tabs, id: int, props: JsObject): Future[void]
 
 proc getURL*(runtime: Runtime, url: cstring): cstring
 proc addListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
@@ -103,12 +105,14 @@ proc sendMessage*(r: Runtime, obj: JsObject | cstring): Future[JsObject]
 proc sendMessage*(r: Runtime, id: cstring, obj: JsObject | cstring): Future[JsObject]
 proc addListener*(r: RuntimeOnMessage, cb: proc(msg: JsObject, sender: JsObject,
     cb: proc(msg: Future[JsObject])))
+proc openOptionsPage*(r: Runtime): Future[void]
 
 proc addListener*(obj: PortEvent, cb: proc(resp: JsObject))
 proc removeListener*(obj: PortEvent, cb: proc(resp: JsObject))
 proc disconnect*(port: Port)
 proc connectNative*(r: Runtime, app: cstring): Port
 proc postMessage(port: Port, msg: cstring)
+
 {.pop importcpp.}
 
 

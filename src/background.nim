@@ -143,8 +143,10 @@ proc setBadgeSuccess(tab_id: int) =
 
 proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
-  let query_tabs = await browser.tabs.query(
-    TabQuery(active: true, currentWindow: true))
+  let query_opts = newJsObject()
+  query_opts["active"] = true
+  query_opts["currentWindow"] = true
+  let query_tabs = await browser.tabs.query(query_opts)
   let tab_id = query_tabs[0].id
   setBadgeNone(tab_id)
 
@@ -173,6 +175,13 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
       pocket_link = link_result.value()
 
 proc initBackground*() {.async.} =
+  when defined(testing):
+    let query_opts = newJsObject()
+    query_opts["url"] = "moz-extension://*/options/options.html".cstring
+    let query_tabs = await browser.tabs.query(query_opts)
+    if query_tabs.len > 0:
+      discard browser.tabs.reload(query_tabs[0].id, newJsObject())
+
   discard browser.browserAction.setIcon(empty_badge)
   discard await asyncUpdateTagDates()
 
@@ -190,8 +199,9 @@ proc initBackground*() {.async.} =
 
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
-    let tabs_opts = TabCreateProps(url: browser.runtime.getURL("index.html"))
-    discard browser.tabs.create(tabs_opts)
+    discard browser.runtime.openOptionsPage()
+    # let tabs_opts = TabCreateProps(url: browser.runtime.getURL("index.html"))
+    # discard browser.tabs.create(tabs_opts)
   )
 
   browser.bookmarks.onCreated.addListener(
