@@ -1,6 +1,5 @@
 import jsconsole, asyncjs, dom, jsffi
 import web_ext_browser, app_config, app_js_ffi
-import sequtils
 
 console.log "Options Page"
 
@@ -11,10 +10,6 @@ type
   # TODO: can also return File
   FormDataEntryValue = cstring
 
-
-proc join*(arr: seq[cstring], sep: cstring): cstring {.importcpp.}
-proc filter*[T](arr: seq[T], fn: proc(it: T): bool): seq[T] {.importcpp.}
-proc trim*(s: cstring): cstring {.importcpp.}
 # TODO?: use FormElement instead
 proc newFormData(elem: Element): FormData {.importcpp: "new FormData(@)".}
 proc get(fd: FormData, key: cstring): FormDataEntryValue {.importcpp.}
@@ -33,8 +28,8 @@ proc optionTagToSeq(s: cstring): seq[seq[cstring]] =
     .filter(proc(row: seq[cstring]): bool = row.len > 0)
 
 import macros
-const form_fields: tuple[bools: seq[cstring], cstrings: seq[cstring], tags: seq[
-    cstring]] = block:
+const form_fields: tuple[bools: seq[cstring], cstrings: seq[
+    cstring], tags: seq[cstring]] = block:
   var bools: seq[cstring] = @[]
   var cstrings: seq[cstring] = @[]
   var tags: seq[cstring] = @[]
@@ -108,11 +103,11 @@ proc init() {.async.} =
     let elem = form_elem.querySelector("#" & key)
     elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
 
-
   form_elem.addEventListener("submit", proc(ev: Event) =
     ev.preventDefault()
     discard saveOptions(ev)
   )
 
-document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
+when isMainModule:
+  document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
 

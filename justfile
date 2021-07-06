@@ -13,6 +13,9 @@ build-pocket:
 build-ext:
   just build-background && zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
 
+build-css:
+  npx postcss src/css/main.css -o dist/main.css --watch
+
 watch-build-ext:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext'
 

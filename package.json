@@ -1,0 +1,30 @@
+{
+  "name": "bookmark_with_pocket",
+  "version": "0.1.0",
+  "description": "firefox web extension that adds pocket link when a bookmark is added",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.3.3",
+    "autoprefixer": "^10.2.6",
+    "postcss": "^8.3.5",
+    "postcss-cli": "^8.3.1",
+    "postcss-import": "^14.0.2",
+    "tailwindcss": "^2.2.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "web",
+    "extension",
+    "firefox",
+    "pocket",
+    "bookmark",
+    "tags"
+  ],
+  "author": "",
+  "license": "ISC"
+}
