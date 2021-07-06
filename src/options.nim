@@ -84,14 +84,17 @@ proc saveOptions(ev: Event) {.async.} =
 proc init() {.async.} =
   console.log form_fields
   let storage = await browser.storage.local.get()
-  let config = if storage == jsUndefined or storage["access_token"] == jsUndefined:
-    console.warn("Could not find web extension local config. Generating new config")
-    newLocalData()
-  else:
-    cast[LocalData](storage)
+  var config = cast[LocalData](storage)
 
-  # TODO: check that storage.access_token is valid
-  # else display somekind of message
+  if storage == jsUndefined or storage["access_token"] == jsUndefined:
+    let not_logged_in_elem = document.querySelector(".js-not-logged-in")
+    not_logged_in_elem.classList.remove("hidden")
+    let login_button_elem = not_logged_in_elem.querySelector(".js-login")
+    login_button_elem.addEventListener("click", proc(_: Event) =
+      console.log "TODO: login to pocket"
+    )
+    console.warn("Could not find web extension local config. Generating new config")
+    config = newLocalData()
 
   # TODO?: generate form fields from form_fields variable
 
@@ -110,7 +113,6 @@ proc init() {.async.} =
     ev.preventDefault()
     discard saveOptions(ev)
   )
-  document.querySelector("button[type=submit]").click()
 
 document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
 
