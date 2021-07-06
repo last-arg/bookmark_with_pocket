@@ -2,7 +2,7 @@ build-background:
   nim js -d:testing src/background.nim
 
 build-options:
-  nim js src/options.nim
+  nim js -d:testing src/options.nim
 
 geckodriver: build-ext
   nim c --threads:on -d:ssl -r tests/script_get_pocket_access_token.nim
@@ -25,8 +25,8 @@ watch-build-options:
 watch-geckodriver:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext && just geckodriver'
 
-web-ext: build-background
-  web-ext run --ignore-files=src/* nimcache/* tmp/* bin/* native-messaging/* node_modules/* tests/* --pref=storage.sqlite.exclusiveLock.enabled=false -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
+web-ext: build-background build-options
+  web-ext run --ignore-files=src/* nimcache/* tmp/* tmp/**/* bin/* native-messaging/* node_modules/* tests/* --pref=storage.sqlite.exclusiveLock.enabled=false -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
 
 setup-native-messaging:
   # requires sqlite3

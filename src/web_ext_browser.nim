@@ -29,10 +29,19 @@ type
   BrowserActionClickedObj {.importjs.} = object
 
   RuntimeOnMessage* = ref object
+  RuntimeOnInstalled* = ref object
 
   Runtime* = ref RuntimeObj
   RuntimeObj {.importjs.} = object
     onMessage*: RuntimeOnMessage
+    onInstalled*: RuntimeOnInstalled
+
+  InstalledDetails* = ref InstalledDetailsObj
+  InstalledDetailsObj {.importjs.} = object
+    id*: cstring              # Optional
+    previousVersion*: cstring # Optional
+    reason*: cstring # "install" | "update" | "browser_update" | "shared_module_update"
+    temporary*: bool
 
   Tabs* = ref TabsObj
   TabsObj {.importjs.} = object
@@ -82,6 +91,7 @@ var browser* {.importjs, nodecl.}: Browser
 
 proc create*(tabs: Tabs, props: TabCreateProps): Future[BookmarkTreeNode]
 
+proc getCurrent*(tabs: Tabs): Future[Tab]
 proc query*(tabs: Tabs, query_obj: JsObject): Future[seq[Tab]]
 proc reload*(tabs: Tabs, id: int, props: JsObject): Future[void]
 
@@ -96,11 +106,13 @@ proc setBadgeTextColor*(ba: BrowserAction, details: BadgeTextColor)
 proc set*(storage_type: Local, keys: JsObject): Future[jsUndefined]
 proc get*(storage_type: Local, keys: JsObject | cstring | seq[cstring]): Future[
     JsObject] # Can return undefined
+proc get*(storage_type: Local): Future[JsObject] # Can return undefined
 proc clear*(storage_type: Local): Future[void]
 
 proc addListener*(obj: StorageOnChanged, cb: proc(changes: JsObject,
     area_name: cstring))
 
+proc addListener*(r: RuntimeOnInstalled, cb: proc(details: InstalledDetails))
 proc sendMessage*(r: Runtime, obj: JsObject | cstring): Future[JsObject]
 proc sendMessage*(r: Runtime, id: cstring, obj: JsObject | cstring): Future[JsObject]
 proc addListener*(r: RuntimeOnMessage, cb: proc(msg: JsObject, sender: JsObject,

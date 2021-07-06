@@ -6,22 +6,52 @@
   </head>
 
   <body>
-    <form>
-      <label>Always add to Pocket</label>
-      <input type="checkbox" id="always_add"/>
+    <p class="hidden">
+      You are not logged into Pocket.
+      <button>Login to Pocket</button>
+    </p>
 
-      <label>Enable allowed tags</label>
-      <input type="checkbox" id="enable_allowed_tags"/>
-      <label>Allowed tags</label>
-      <input type="text" id="allowed_tags"/>
+    <form class="options" name"options">
+      <h1>Options</h1>
+      <h2>When to add links/items to Pocket?</h2>
+      <div>
+        <label for="always_add">Always add to Pocket</label>
+        <input type="checkbox" id="always_add" name="always_add"/>
+      </div>
 
-      <label>Enable discard tags</label>
-      <input type="checkbox" id="enable_discard_tags"/>
-      <label>Discard tags</label>
-      <input type="text" id="discard_tags"/>
+      <div>
+        <label for="add_tags">Add when has tags</label>
+        <textarea id="add_tags" name="add_tags">pocket</textarea>
+      </div>
 
-      <label>Don't add tags</label>
-      <input type="text" id="dont_add_tags"/>
+      <div>
+        <label for="no_add_tags">Don't add when has tags</label>
+        <textarea id="no_add_tags" name="no_add_tags">no-pocket</textarea>
+      </div>
+
+      <div>
+        <label for="remove_bk_tags">Remove added bookmark tags</label>
+        <textarea id="remove_bk_tags" name="remove_bk_tags">only-pocket</textarea>
+      </div>
+
+      <h2>What tags to add to Pocket item/link?</h2>
+      <div>
+        <label for="enable_allowed_tags">Enable allowed tags</label>
+        <input type="checkbox" id="enable_allowed_tags" name="enable_allowed_tags"/>
+      </div>
+      <div>
+        <label for="allowed_tags">Allowed tags</label>
+        <textarea id="allowed_tags" name="allowed_tags"></textarea>
+      </div>
+
+      <div>
+        <label for="enable_discard_tags">Enable discard tags</label>
+        <input type="checkbox" id="enable_discard_tags" name="enable_discard_tags"/>
+      </div>
+      <div>
+        <label for="discard_tags">Discard tags</label>
+        <textarea id="discard_tags" name="discard_tags"></textarea>
+      </div>
 
       <button type="submit">Save</button>
     </form>

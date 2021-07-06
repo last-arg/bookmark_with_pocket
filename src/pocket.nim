@@ -1,6 +1,7 @@
 import asyncjs, jsffi, dom, jscore
 import jsconsole
 import results
+import app_js_ffi
 
 proc getRedirectURL*(): cstring {.importcpp: "browser.identity.getRedirectURL()".}
 
@@ -61,9 +62,6 @@ func newRequest*(url: cstring; opts: JsObject = newJsObject()): Request {.
     importcpp: "(new Request(#, #))".}
 
 proc text*(self: Response): Future[cstring] {.importcpp: "#.$1()".}
-
-func split*(pattern: cstring; self: cstring): seq[cstring] {.
-    importcpp: "#.split(#)".}
 
 func contentTypeHeaderValues(content_type: ContentType): JsObject =
   let type_str = ($content_type).cstring

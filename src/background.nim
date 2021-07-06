@@ -1,6 +1,6 @@
 import dom, jsffi, asyncjs
 import jsconsole
-import web_ext_browser, bookmarks
+import web_ext_browser, bookmarks, app_config
 import results
 import pocket
 
@@ -9,39 +9,19 @@ type
     modified*: int
     title*: cstring
 
+  # TODO?: rename Config to State
+  # TODO?: rename local to config
   Config* = ref ConfigObj
   ConfigObj = object
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
-    local: LocalData
-
-  LocalData* = ref object
-    access_token*: cstring
-    username*: cstring
-    always_add: bool
-    add_tags*: seq[seq[cstring]]
-    no_add_tags*: seq[seq[cstring]]
-    allowed_tags*: seq[seq[cstring]]
-    discard_tags*: seq[seq[cstring]]
+    local*: LocalData
 
 proc newConfig*(
-    access_token: cstring = "",
-    username: cstring = "",
     tag_ids: seq[cstring] = @[],
     tags: seq[TagInfo] = @[],
-    always_add = false,
-    add_tags: seq[seq[cstring]] = @[@["pocket".cstring]],
-    no_add_tags: seq[seq[cstring]] = @[@["no-pocket".cstring]],
-    allowed_tags: seq[seq[cstring]] = @[],
-    discard_tags: seq[seq[cstring]] = @[],
+    local: LocalData = newLocalData()
   ): Config =
-  let local = LocalData(access_token: "",
-      username: username,
-      always_add: always_add,
-      add_tags: add_tags,
-      no_add_tags: no_add_tags,
-      allowed_tags: allowed_tags,
-      discard_tags: discard_tags)
   Config(tag_ids: tag_ids, tags: tags, local: local)
 
 var config = newConfig()
@@ -175,33 +155,27 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
       pocket_link = link_result.value()
 
 proc initBackground*() {.async.} =
+  console.log "BACKGROUND"
+
   when defined(testing):
+    # await browser.runtime.openOptionsPage()
     let query_opts = newJsObject()
     query_opts["url"] = "moz-extension://*/options/options.html".cstring
     let query_tabs = await browser.tabs.query(query_opts)
+    console.log query_tabs
     if query_tabs.len > 0:
       discard browser.tabs.reload(query_tabs[0].id, newJsObject())
 
   discard browser.browserAction.setIcon(empty_badge)
   discard await asyncUpdateTagDates()
 
-  let storage = await browser.storage.local.get("local".cstring)
-  if storage.hasOwnProperty("local"):
-    let local = cast[LocalData](storage["local"])
-    if not isUndefined(local.access_token) and
-        local.access_token.len > 0:
-      config.local.access_token = local.access_token
-      config.local.username = local.username
-    else:
-      console.warn "No 'access_token' found"
-  else:
-    console.warn "No 'local' in browser.storage.local"
-
+  let storage = await browser.storage.local.get()
+  console.log storage
+  config.local = cast[LocalData](storage)
+  # TODO: check that access_token exists and is valid
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
     discard browser.runtime.openOptionsPage()
-    # let tabs_opts = TabCreateProps(url: browser.runtime.getURL("index.html"))
-    # discard browser.tabs.create(tabs_opts)
   )
 
   browser.bookmarks.onCreated.addListener(
@@ -213,11 +187,20 @@ proc initBackground*() {.async.} =
   browser.bookmarks.onRemoved.addListener(
     proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
 
-  return
+
+browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
+  console.log "ONINSTALLED EVENT"
+  if details.reason == "install":
+    proc install() {.async.} =
+      let local_data = newJsObject()
+      local_data["local"] = cast[JsObject](newLocalData())
+      discard await browser.storage.local.set(local_data)
+      console.log "set storage.local"
+      await browser.runtime.openOptionsPage()
+    discard install()
+)
 
 when isMainModule:
-
-
   when defined(release):
     console.log "BACKGROUND RELEASE BUILD"
     discard initBackground()
@@ -360,8 +343,8 @@ when isMainModule:
         block filter_tags:
           testFilterTags()
 
-        block pocket_access_token:
-          check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
+        # block pocket_access_token:
+        #   check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
           skip()
@@ -369,15 +352,21 @@ when isMainModule:
 
 
     proc setup() {.async.} =
+      await browser.storage.local.clear()
       console.info "Tests setup"
-      config = newConfig()
+      config = newConfig(
+      local = newLocalData(
+        add_tags = @[@["pocket".cstring, "pocket_again"], @["second".cstring]])
+      )
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
-      let local_obj = newJsObject()
-      local_obj.local = local_value
-      discard await browser.storage.local.set(local_obj)
+      config.local.access_token = cast[cstring](local_value.access_token)
+      config.local.username = cast[cstring](local_value.username)
+      discard await browser.storage.local.set(cast[JsObject](config.local))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
+      let tabs_opts = TabCreateProps(url: browser.runtime.getURL("options/options.html"))
+      discard browser.tabs.create(tabs_opts)
 
     proc cleanup() {.async.} =
       console.info "Tests cleanup"
@@ -385,12 +374,13 @@ when isMainModule:
         await browser.bookmarks.remove(id)
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)
-      await browser.storage.local.clear()
 
     proc runTestSuite() {.async, discardable.} =
       console.info "Start test suite"
       await setup()
       await initBackground()
+      # document.addEventListener("DOMContentLoaded", proc(
+      #     _: Event) = console.log "content loaded"; discard initBackground())
       try:
         await runTestsImpl()
       finally:
