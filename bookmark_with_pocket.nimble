@@ -6,7 +6,7 @@ description = "Browser extension. When adding bookmarks can also add link to poc
 license = "MIT"
 srcDir = "src"
 binDir = "dist"
-bin = @["bookmark_pocket"]
+bin = @["bookmark_with_pocket"]
 # skipDirs = @["balls"]
 
 # backend = "js"
