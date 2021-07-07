@@ -1,3 +1,5 @@
+import jsffi
+
 type
   LocalData* = ref LocalDataObj
   LocalDataObj* {.importc.} = object of RootObj
@@ -35,4 +37,6 @@ proc newLocalData*(
       enable_discard_tags: enable_discard_tags,
       discard_tags: discard_tags)
 
+proc get*[T](config: LocalData, key: cstring): T =
+  cast[T](cast[JsObject](config)[key])
 

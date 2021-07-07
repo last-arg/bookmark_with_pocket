@@ -1,7 +1,6 @@
 import jsconsole, asyncjs, dom, jsffi
-import web_ext_browser, app_config, app_js_ffi
-
-console.log "Options Page"
+import web_ext_browser, app_config, app_js_ffi, pocket
+import result
 
 type
   FormData* = ref FormDataObj
@@ -53,9 +52,6 @@ const form_fields: tuple[bools: seq[cstring], cstrings: seq[
 
   (bools, cstrings, tags)
 
-proc get[T](config: LocalData, key: cstring): T =
-  cast[T](cast[JsObject](config)[key])
-
 proc saveOptions(ev: Event) {.async.} =
   ev.preventDefault()
   var config = cast[LocalData](
@@ -76,20 +72,68 @@ proc saveOptions(ev: Event) {.async.} =
     elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
 
 
+const event_once_opt = AddEventListenerOptions(once: true, capture: false,
+    passive: false)
+
+proc initLogoutButton()
+proc initLoginButton() =
+  let js_login = document.querySelector(".js-not-logged-in")
+  js_login.classList.remove("hidden")
+  let login_button_elem = js_login.querySelector(".js-login")
+  login_button_elem.addEventListener("click", proc(_: Event) =
+    proc asyncCb() {.async.} =
+      let body_result = await authenticate()
+      if body_result.isErr():
+        console.error("Pocket authentication failed")
+        initLoginButton()
+        return
+      # Deconstruct urlencoded data
+      let kvs = body_result.value.split("&")
+      var login_data = newJsObject()
+      const username = "username"
+      const access_token = "access_token"
+      login_data[access_token] = nil
+      login_data[username] = nil
+      for kv_str in kvs:
+        let kv = kv_str.split("=")
+        if kv[0] == access_token:
+          login_data[access_token] = kv[1]
+        elif kv[0] == username:
+          login_data[username] = kv[1]
+
+      if login_data[access_token] == nil:
+        console.error("Failed to get access_token form Pocket API response")
+        initLoginButton()
+        return
+
+      discard await browser.storage.local.set(login_data)
+      initLogoutButton()
+      js_login.classList.add("hidden")
+    discard asyncCb()
+  , event_once_opt)
+
+proc initLogoutButton() =
+  let js_logout = document.querySelector(".js-logout")
+  js_logout.classList.remove("hidden")
+  js_logout.addEventListener("click", proc(_: Event) =
+    discard browser.storage.local.remove(@["access_token".cstring,
+        "username".cstring])
+    initLoginButton()
+    js_logout.classList.add("hidden")
+  , event_once_opt)
+
 proc init() {.async.} =
   console.log form_fields
   let storage = await browser.storage.local.get()
+  console.log storage
   var config = cast[LocalData](storage)
 
   if storage == jsUndefined or storage["access_token"] == jsUndefined:
-    let not_logged_in_elem = document.querySelector(".js-not-logged-in")
-    not_logged_in_elem.classList.remove("hidden")
-    let login_button_elem = not_logged_in_elem.querySelector(".js-login")
-    login_button_elem.addEventListener("click", proc(_: Event) =
-      console.log "TODO: login to pocket"
-    )
+    initLoginButton()
     console.warn("Could not find web extension local config. Generating new config")
     config = newLocalData()
+  else:
+    initLogoutButton()
 
   # TODO?: generate form fields from form_fields variable
 
@@ -110,4 +154,3 @@ proc init() {.async.} =
 
 when isMainModule:
   document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
-

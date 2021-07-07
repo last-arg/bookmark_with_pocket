@@ -106,6 +106,7 @@ proc setBadgeTextColor*(ba: BrowserAction, details: BadgeTextColor)
 proc set*(storage_type: Local, keys: JsObject): Future[jsUndefined]
 proc get*(storage_type: Local, keys: JsObject | cstring | seq[cstring]): Future[
     JsObject] # Can return undefined
+proc remove*(storage_type: Local, keys: cstring | seq[cstring]): Future[JsObject]
 proc get*(storage_type: Local): Future[JsObject] # Can return undefined
 proc clear*(storage_type: Local): Future[void]
 
