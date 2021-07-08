@@ -135,8 +135,6 @@ proc init() {.async.} =
   else:
     initLogoutButton()
 
-  # TODO?: generate form fields from form_fields variable
-
   let form_elem = document.querySelector(".options")
 
   for key in form_fields.bools:

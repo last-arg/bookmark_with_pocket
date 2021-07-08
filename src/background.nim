@@ -1,28 +1,7 @@
 import dom, jsffi, asyncjs
 import jsconsole
-import web_ext_browser, bookmarks, app_config
+import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import results
-import pocket
-
-type
-  TagInfo* = ref object
-    modified*: int
-    title*: cstring
-
-  # TODO?: rename Config to State
-  # TODO?: rename local to config
-  Config* = ref ConfigObj
-  ConfigObj = object
-    tag_ids*: seq[cstring]
-    tags*: seq[TagInfo]
-    local*: LocalData
-
-proc newConfig*(
-    tag_ids: seq[cstring] = @[],
-    tags: seq[TagInfo] = @[],
-    local: LocalData = newLocalData()
-  ): Config =
-  Config(tag_ids: tag_ids, tags: tags, local: local)
 
 var config = newConfig()
 when defined(testing):
@@ -34,8 +13,6 @@ empty_badge["path"] = "./assets/badge_empty.svg".cstring
 let badge = newJsObject()
 badge["path"] = "./assets/badge.svg".cstring
 
-proc filter*[T](arr: seq[T], fn: (proc(item: T): bool)): seq[T] {.
-    importjs: "#.filter(#)".}
 proc filterTags*(tags: seq[cstring], allowed_tags, discard_tags: seq[
     seq[cstring]]): seq[cstring] =
   var new_tags = newSeq[cstring]()
@@ -136,7 +113,7 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   if hasNoAddTag(added_tags, config.local.no_add_tags):
     return
 
-  if config.local.always_add or hasAddTag(added_tags,
+  if config.local.always_add_tags or hasAddTag(added_tags,
       config.local.add_tags):
     setBadgeLoading(tab_id)
     let filtered_tags = filterTags(added_tags, config.local.allowed_tags,
