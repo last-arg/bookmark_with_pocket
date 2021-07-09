@@ -18,30 +18,35 @@
 
     <form class="options" name"options">
       <h1>Options</h1>
+
       <fieldset>
         <legend>Adding links to Pocket</legend>
         <div>
-          <label for="always_add">Always add to Pocket</label>
-          <input type="checkbox" id="always_add" name="always_add"/>
+          <input type="checkbox" id="always_add_tags" name="always_add_tags"/>
+          <label for="always_add_tags">Always add to Pocket</label>
         </div>
 
         <div>
           <label for="add_tags">Add when has tag rules</label>
-          <p>Every line is a separate <strong>tags rule</strong>. A <strong>tag rule</strong> contains one or more comma separated tags. For <strong>tag rule</strong> to be applied all the tags on a line must be in bookmark's tags field.</p>
-          <textarea id="add_tags" name="add_tags">pocket</textarea>
+          <p>
+            Every line is a separate <strong>tags rule</strong>.
+            A <strong>tag rule</strong> contains one or more comma separated tags.
+            For <strong>tag rule</strong> to be applied all the tags on a line must be in bookmark's tags field.
+          </p>
+          <textarea id="add_tags" name="add_tags"></textarea>
         </div>
 
         <div>
           <label for="no_add_tags">Don't add when has tag rules</label>
-          <textarea id="no_add_tags" name="no_add_tags">no-pocket</textarea>
+          <textarea id="no_add_tags" name="no_add_tags"></textarea>
         </div>
       </fieldset>
 
       <fieldset>
         <legend>Tagging Pocket links</legend>
         <div>
-          <label for="enable_allowed_tags">Enable allowed tag rules</label>
           <input type="checkbox" id="enable_allowed_tags" name="enable_allowed_tags"/>
+          <label for="enable_allowed_tags">Enable allowed tag rules</label>
         </div>
         <div>
           <label for="allowed_tags">Allowed tag rules</label>
@@ -49,8 +54,8 @@
         </div>
 
         <div>
-          <label for="enable_discard_tags">Enable discard tag rules</label>
           <input type="checkbox" id="enable_discard_tags" name="enable_discard_tags"/>
+          <label for="enable_discard_tags">Enable discard tag rules</label>
         </div>
         <div>
           <label for="discard_tags">Discard tag rules</label>
