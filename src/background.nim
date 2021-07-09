@@ -3,7 +3,7 @@ import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import results
 
-var config = newConfig()
+var status = newStatus()
 when defined(testing):
   var pocket_link: JsObject = nil
 
@@ -36,18 +36,18 @@ proc filterTags*(tags: seq[cstring], allowed_tags, discard_tags: seq[
 proc updateTagDates*(tags: seq[BookmarkTreeNode]): seq[cstring] =
   var r: seq[cstring] = @[]
   for tag in tags:
-    let id_index = find[seq[cstring], cstring](config.tag_ids, tag.id)
+    let id_index = find[seq[cstring], cstring](status.tag_ids, tag.id)
     if id_index == -1:
       let tag_info = TagInfo(modified: tag.dateGroupModified,
           title: tag.title)
       r.add(tag.title)
-      config.tag_ids.add(tag.id)
-      config.tags.add(tag_info)
+      status.tag_ids.add(tag.id)
+      status.tags.add(tag_info)
       continue
 
-    if tag.dateGroupModified != config.tags[id_index].modified:
+    if tag.dateGroupModified != status.tags[id_index].modified:
       r.add(tag.title)
-      config.tags[id_index] = TagInfo(modified: tag.dateGroupModified,
+      status.tags[id_index] = TagInfo(modified: tag.dateGroupModified,
           title: tag.title)
 
   return r
@@ -110,16 +110,16 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
 
-  if hasNoAddTag(added_tags, config.local.no_add_tags):
+  if hasNoAddTag(added_tags, status.config.no_add_tags):
     return
 
-  if config.local.always_add_tags or hasAddTag(added_tags,
-      config.local.add_tags):
+  if status.config.always_add_tags or hasAddTag(added_tags,
+      status.config.add_tags):
     setBadgeLoading(tab_id)
-    let filtered_tags = filterTags(added_tags, config.local.allowed_tags,
-        config.local.discard_tags)
+    let filtered_tags = filterTags(added_tags, status.config.allowed_tags,
+        status.config.discard_tags)
     let link_result = await addLink(bookmark.url,
-        config.local.access_token, filtered_tags)
+        status.config.access_token, filtered_tags)
     if link_result.isErr():
       console.error "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
@@ -148,12 +148,14 @@ proc initBackground*() {.async.} =
 
   let storage = await browser.storage.local.get()
   console.log storage
-  config.local = cast[LocalData](storage)
+  status.config = cast[Config](storage)
+
   # TODO: check that access_token exists and is valid
+  # Display different extension badge when no access_token
+  # Clicking on badge attempts Pocket authentication
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
-    discard browser.runtime.openOptionsPage()
-  )
+    discard browser.runtime.openOptionsPage())
 
   browser.bookmarks.onCreated.addListener(
     proc(id: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark))
@@ -169,8 +171,7 @@ browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   console.log "ONINSTALLED EVENT"
   if details.reason == "install":
     proc install() {.async.} =
-      let local_data = newJsObject()
-      local_data["local"] = cast[JsObject](newLocalData())
+      let local_data = cast[JsObject](newConfig())
       discard await browser.storage.local.set(local_data)
       console.log "set storage.local"
       await browser.runtime.openOptionsPage()
@@ -185,7 +186,7 @@ when isMainModule:
   when defined(testing):
     import balls, jscore, web_ext_browser
 
-    # IMPORTANT: Test functions use global variable 'config'
+    # IMPORTANT: Test functions use global variable 'status'
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
 
     proc createTags(tags: seq[cstring]): Future[void] {.async.} =
@@ -197,10 +198,10 @@ when isMainModule:
     proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
       var r: seq[cstring] = @[]
       for tag in tags:
-        let id_index = find[seq[cstring], cstring](config.tag_ids, tag.id)
+        let id_index = find[seq[cstring], cstring](status.tag_ids, tag.id)
         if id_index == -1:
           r.add(tag.title)
-        elif tag.dateGroupModified != config.tags[id_index].modified:
+        elif tag.dateGroupModified != status.tags[id_index].modified:
           r.add(tag.title)
 
       return r
@@ -238,7 +239,7 @@ when isMainModule:
       let msg = await sendPortMessage(p, "tag_inc|pocket,video,discard_tag")
       check msg != nil, "Can't connnect to sqlite_update native application"
 
-      config.local.discard_tags.add(@[@["discard_tag".cstring], @[
+      status.config.discard_tags.add(@[@["discard_tag".cstring], @[
           "pocket".cstring]])
 
       # tags that are part of bookmark
@@ -253,11 +254,11 @@ when isMainModule:
 
       let link_added = await waitForPocketLink()
       check link_added, "Could not get added pocket link. Either test timed out because adding link was taking too long or adding link failed on pocket side."
-      let status = cast[int](pocket_link.status)
-      check status == 1, "pocket_link status failed"
+      let pocket_status = cast[int](pocket_link.status)
+      check pocket_status == 1, "pocket_link status failed"
 
       # Check that link was added to pocket
-      let links_result = await retrieveLinks(config.local.access_token,
+      let links_result = await retrieveLinks(status.config.access_token,
           url_to_add)
       check links_result.isOk()
       let links = links_result.value()
@@ -275,7 +276,7 @@ when isMainModule:
       var action = newJsObject()
       action["action"] = "delete".cstring
       action["item_id"] = link_key
-      let del_result = await modifyLink(config.local.access_token, action)
+      let del_result = await modifyLink(status.config.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
       let del_status = cast[int](del_value.status)
@@ -291,7 +292,7 @@ when isMainModule:
 
       # Make sure pocket link was deleted
       let links_empty_result = await retrieveLinks(
-          config.local.access_token, url_to_add)
+          status.config.access_token, url_to_add)
       check links_empty_result.isOk()
       let links_empty = links_empty_result.value()
       let list_empty = cast[seq[JsObject]](links_empty.list)
@@ -321,7 +322,7 @@ when isMainModule:
           testFilterTags()
 
         # block pocket_access_token:
-        #   check config.local.access_token.len > 0, "'access_token' was not found in extension local storage"
+        #   check status.config.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
           skip()
@@ -331,15 +332,15 @@ when isMainModule:
     proc setup() {.async.} =
       await browser.storage.local.clear()
       console.info "Tests setup"
-      config = newConfig(
-      local = newLocalData(
-        add_tags = @[@["pocket".cstring, "pocket_again"], @["second".cstring]])
-      )
+      status = newStatus(
+        config = newConfig(
+          add_tags = @[@["pocket".cstring, "pocket_again"], @[
+              "second".cstring]]))
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
-      config.local.access_token = cast[cstring](local_value.access_token)
-      config.local.username = cast[cstring](local_value.username)
-      discard await browser.storage.local.set(cast[JsObject](config.local))
+      status.config.access_token = cast[cstring](local_value.access_token)
+      status.config.username = cast[cstring](local_value.username)
+      discard await browser.storage.local.set(cast[JsObject](status.config))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
       let tabs_opts = TabCreateProps(url: browser.runtime.getURL("options/options.html"))
@@ -347,7 +348,7 @@ when isMainModule:
 
     proc cleanup() {.async.} =
       console.info "Tests cleanup"
-      for id in config.tag_ids:
+      for id in status.tag_ids:
         await browser.bookmarks.remove(id)
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)

@@ -24,7 +24,7 @@ watch-build-background:
 
 watch-build-options:
   watchexec -c -r -w src/ -w ./ -e nim -i 'src/background.nim' 'just build-options'
-  
+
 watch-geckodriver:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext && just geckodriver'
 

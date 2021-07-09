@@ -5,16 +5,14 @@ type
     modified*: int
     title*: cstring
 
-  # TODO?: rename Config to State
-  # TODO?: rename local to config
-  Config* = ref ConfigObj
-  ConfigObj = object
+  Status* = ref StatusObj
+  StatusObj = object
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
-    local*: LocalData
+    config*: Config
 
-  LocalData* = ref LocalDataObj
-  LocalDataObj* {.importc.} = object of RootObj
+  Config* = ref ConfigObj
+  ConfigObj* {.importc.} = object of RootObj
     access_token*: cstring
     username*: cstring
     always_add_tags*: bool
@@ -26,7 +24,7 @@ type
     discard_tags*: seq[seq[cstring]]
     remove_bk_tags*: seq[seq[cstring]]
 
-proc newLocalData*(
+proc newConfig*(
     access_token: cstring = "",
     username: cstring = "",
     always_add_tags = false,
@@ -37,8 +35,8 @@ proc newLocalData*(
     allowed_tags: seq[seq[cstring]] = @[],
     enable_discard_tags: bool = false,
     discard_tags: seq[seq[cstring]] = @[],
-): LocalData =
-  LocalData(access_token: "",
+): Config =
+  Config(access_token: "",
       username: username,
       always_add_tags: always_add_tags,
       add_tags: add_tags,
@@ -49,13 +47,12 @@ proc newLocalData*(
       enable_discard_tags: enable_discard_tags,
       discard_tags: discard_tags)
 
-proc newConfig*(
+proc newStatus*(
     tag_ids: seq[cstring] = @[],
     tags: seq[TagInfo] = @[],
-    local: LocalData = newLocalData()
-  ): Config =
-  Config(tag_ids: tag_ids, tags: tags, local: local)
+    config: Config = newConfig()
+  ): Status = Status(tag_ids: tag_ids, tags: tags, config: config)
 
-proc get*[T](config: LocalData, key: cstring): T =
+proc get*[T](config: Config, key: cstring): T =
   cast[T](cast[JsObject](config)[key])
 

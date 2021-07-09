@@ -32,8 +32,8 @@ const form_fields: tuple[bools: seq[cstring], cstrings: seq[
   var bools: seq[cstring] = @[]
   var cstrings: seq[cstring] = @[]
   var tags: seq[cstring] = @[]
-  # echo "Type declartaion is: ", LocalData.getTypeImpl[0].getTypeImpl.treerepr
-  for item in LocalData.getTypeImpl[0].getTypeImpl[2]:
+  # echo "Type declartaion is: ", Config.getTypeImpl[0].getTypeImpl.treerepr
+  for item in Config.getTypeImpl[0].getTypeImpl[2]:
     # echo item[0]
     let field_name = $item[0]
     if item[1].kind == nnkSym:
@@ -42,19 +42,19 @@ const form_fields: tuple[bools: seq[cstring], cstrings: seq[
       elif $item[1] == "cstring":
         cstrings.add(field_name)
       else:
-        echo "unknown field type in LocalData -> " & $item[0] & ": " & $item[1]
+        echo "unknown field type in Config -> " & $item[0] & ": " & $item[1]
         # TODO: add somekind of error/exception message
     elif item[1].kind == nnkBracketExpr and item[1].repr == "seq[seq[cstring]]":
       tags.add(field_name)
     else:
-      echo "unknown field type in LocalData -> " & $item[0] & ": " & $item[1]
+      echo "unknown field type in Config -> " & $item[0] & ": " & $item[1]
       # TODO: add somekind of error/exception message
 
   (bools, cstrings, tags)
 
 proc saveOptions(ev: Event) {.async.} =
   ev.preventDefault()
-  var config = cast[LocalData](
+  var config = cast[Config](
     await browser.storage.local.get(
       form_fields.bools.concat(form_fields.tags)))
   let options = newFormData(cast[Element](ev.target))
@@ -126,12 +126,12 @@ proc init() {.async.} =
   console.log form_fields
   let storage = await browser.storage.local.get()
   console.log storage
-  var config = cast[LocalData](storage)
+  var config = cast[Config](storage)
 
   if storage == jsUndefined or storage["access_token"] == jsUndefined:
     initLoginButton()
     console.warn("Could not find web extension local config. Generating new config")
-    config = newLocalData()
+    config = newConfig()
   else:
     initLogoutButton()
 
