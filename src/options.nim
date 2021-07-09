@@ -26,31 +26,30 @@ proc optionTagToSeq(s: cstring): seq[seq[cstring]] =
         .filter(proc(val: cstring): bool = val.len > 0))
     .filter(proc(row: seq[cstring]): bool = row.len > 0)
 
-import macros
-const form_fields: tuple[bools: seq[cstring], cstrings: seq[
-    cstring], tags: seq[cstring]] = block:
+import macros, os
+const form_fields: tuple[bools: seq[cstring], tags: seq[cstring]] = block:
   var bools: seq[cstring] = @[]
-  var cstrings: seq[cstring] = @[]
   var tags: seq[cstring] = @[]
   # echo "Type declartaion is: ", Config.getTypeImpl[0].getTypeImpl.treerepr
   for item in Config.getTypeImpl[0].getTypeImpl[2]:
-    # echo item[0]
     let field_name = $item[0]
-    if item[1].kind == nnkSym:
-      if $item[1] == "bool":
+    let config_type = item[1]
+    if config_type.kind == nnkSym:
+      if $config_type == "bool":
         bools.add(field_name)
-      elif $item[1] == "cstring":
-        cstrings.add(field_name)
+      elif $config_type == "cstring":
+        # cstring fields aren't used in html form
+        continue
       else:
-        echo "unknown field type in Config -> " & $item[0] & ": " & $item[1]
-        # TODO: add somekind of error/exception message
-    elif item[1].kind == nnkBracketExpr and item[1].repr == "seq[seq[cstring]]":
+        raise newException(ValueError, "[WARN] unknown field type in Config -> " &
+            $field_name & ": " & $config_type)
+    elif config_type.kind == nnkBracketExpr and config_type.repr == "seq[seq[cstring]]":
       tags.add(field_name)
     else:
-      echo "unknown field type in Config -> " & $item[0] & ": " & $item[1]
-      # TODO: add somekind of error/exception message
+        raise newException(ValueError, "[WARN] unknown field type in Config -> " &
+            $field_name & ": " & $config_type)
 
-  (bools, cstrings, tags)
+  (bools, tags)
 
 proc saveOptions(ev: Event) {.async.} =
   ev.preventDefault()
