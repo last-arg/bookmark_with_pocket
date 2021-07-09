@@ -6,11 +6,11 @@ type
   FormData* = ref FormDataObj
   FormDataObj {.importc.} = object of RootObj
 
-  # TODO: can also return File
+  # NOTE: can also be File (https://developer.mozilla.org/en-US/docs/Web/API/File)
   FormDataEntryValue = cstring
 
-# TODO?: use FormElement instead
-proc newFormData(elem: Element): FormData {.importcpp: "new FormData(@)".}
+proc newFormData(elem: FormElement): FormData {.importcpp: "new FormData(@)".}
+# Can return null if key doesn't exist
 proc get(fd: FormData, key: cstring): FormDataEntryValue {.importcpp.}
 
 proc tagOptionsToString(tags: seq[seq[cstring]]): cstring =
@@ -57,7 +57,7 @@ proc saveOptions(ev: Event) {.async.} =
   var config = cast[Config](
     await browser.storage.local.get(
       form_fields.bools.concat(form_fields.tags)))
-  let options = newFormData(cast[Element](ev.target))
+  let options = newFormData(cast[FormElement](ev.target))
   for key in form_fields.bools:
     cast[JsObject](config)[key] = options.get(key) == "on"
 
