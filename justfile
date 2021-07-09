@@ -11,8 +11,8 @@ watch-js:
   watchexec -c -r -w ./src -e nim -i 'src/options.nim' 'just build-background' &
   watchexec -c -r -w ./src -e nim -i 'src/background.nim' 'just build-options'
 
-build-ext:
-  just build-background && zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
+build-ext: build-background build-options
+  zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
 
 watch-build-ext:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext'
