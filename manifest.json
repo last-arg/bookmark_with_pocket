@@ -71,12 +71,12 @@
     "page": "options/options.html",
     "browser_style": true,
     "open_in_tab": true
-  }
-  // "content_scripts": [
-  //   {
-  //     "matches": ["*://*/*"],
-  //     "js": ["tests/test_pocket.js"],
-  //     "run_at": "document_start"
-  //   }
-  // ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content_script.js"],
+      "run_at": "document_start"
+    }
+  ]
 }

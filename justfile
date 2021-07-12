@@ -7,9 +7,15 @@ build-background:
 build-options:
   nim js -d:testing src/options.nim
 
+build-content:
+  nim js -d:testing src/content_script.nim
+
+watch-js-content:
+  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options.nim' 'just build-content'
+
 watch-js:
-  watchexec -c -r -w ./src -e nim -i 'src/options.nim' 'just build-background' &
-  watchexec -c -r -w ./src -e nim -i 'src/background.nim' 'just build-options'
+  watchexec -c -r -w ./src -e nim -i 'src/options.nim' -i 'src/content_script.nim' 'just build-background' &
+  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/content_script.nim' 'just build-options'
 
 build-ext: build-background build-options
   zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}

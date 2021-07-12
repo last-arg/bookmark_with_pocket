@@ -153,6 +153,7 @@ proc initBackground*() {.async.} =
   # TODO: check that access_token exists and is valid
   # Display different extension badge when no access_token
   # Clicking on badge attempts Pocket authentication
+  # Text: Login to Pocket
 
   browser.browserAction.onClicked.addListener(proc(tab: Tab) =
     discard browser.runtime.openOptionsPage())
@@ -165,6 +166,9 @@ proc initBackground*() {.async.} =
 
   browser.bookmarks.onRemoved.addListener(
     proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
+
+  browser.runtime.onMessage.addListener(proc(msg: cstring) =
+    if msg == "update_tags": discard asyncUpdateTagDates())
 
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
