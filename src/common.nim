@@ -3,9 +3,10 @@ import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import results
 
-var status* = newStatus()
- # TODO: try improve testing code
- # Try to remove global variables like 'pocket_link'
+# TODO: Try to move this to background.nim
+var g_status*: Status = nil
+  # TODO: try improve testing code
+  # Try to remove global variables like 'pocket_link'
 when defined(testing):
   var pocket_link*: JsObject = nil
 
@@ -71,18 +72,18 @@ proc getCurrentTabId*(): Future[int] {.async.} =
 proc updateTagDates*(tags: seq[BookmarkTreeNode]): seq[cstring] =
   var r: seq[cstring] = @[]
   for tag in tags:
-    let id_index = find[seq[cstring], cstring](status.tag_ids, tag.id)
+    let id_index = find[seq[cstring], cstring](g_status.tag_ids, tag.id)
     if id_index == -1:
       let tag_info = TagInfo(modified: tag.dateGroupModified,
           title: tag.title)
       r.add(tag.title)
-      status.tag_ids.add(tag.id)
-      status.tags.add(tag_info)
+      g_status.tag_ids.add(tag.id)
+      g_status.tags.add(tag_info)
       continue
 
-    if tag.dateGroupModified != status.tags[id_index].modified:
+    if tag.dateGroupModified != g_status.tags[id_index].modified:
       r.add(tag.title)
-      status.tags[id_index] = TagInfo(modified: tag.dateGroupModified,
+      g_status.tags[id_index] = TagInfo(modified: tag.dateGroupModified,
           title: tag.title)
 
   return r
@@ -140,16 +141,16 @@ proc onCreateBookmark*(bookmark: BookmarkTreeNode) {.async.} =
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
 
-  if hasNoAddTag(added_tags, status.config.no_add_tags):
+  if hasNoAddTag(added_tags, g_status.config.no_add_tags):
     return
 
-  if status.config.always_add_tags or hasAddTag(added_tags,
-      status.config.add_tags):
+  if g_status.config.always_add_tags or hasAddTag(added_tags,
+      g_status.config.add_tags):
     setBadgeLoading(tab_id)
-    let filtered_tags = filterTags(added_tags, status.config.allowed_tags,
-        status.config.discard_tags)
+    let filtered_tags = filterTags(added_tags, g_status.config.allowed_tags,
+        g_status.config.discard_tags)
     let link_result = await addLink(bookmark.url,
-        status.config.access_token, filtered_tags)
+        g_status.config.access_token, filtered_tags)
     if link_result.isErr():
       console.error "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
@@ -183,5 +184,3 @@ proc initLoggedIn*(tab_id: int) =
   browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
   browser.runtime.onMessage.addListener(onMessageCommand)
-
-

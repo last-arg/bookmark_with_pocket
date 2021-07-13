@@ -43,7 +43,8 @@ proc initBackground*() {.async.} =
       discard browser.tabs.reload(query_tabs[0].id, newJsObject())
 
   let storage = await browser.storage.local.get()
-  status.config = cast[Config](storage)
+  g_status = newStatus()
+  g_status.config = cast[Config](storage)
 
   let tab_id = await getCurrentTabId()
   let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
@@ -76,7 +77,7 @@ when isMainModule:
   when defined(testing):
     import balls, jscore, web_ext_browser
 
-    # IMPORTANT: Test functions use global variable 'status'
+    # IMPORTANT: Test functions use global variable 'g_status'
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
 
     proc createTags(tags: seq[cstring]): Future[void] {.async.} =
@@ -88,10 +89,10 @@ when isMainModule:
     proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
       var r: seq[cstring] = @[]
       for tag in tags:
-        let id_index = find[seq[cstring], cstring](status.tag_ids, tag.id)
+        let id_index = find[seq[cstring], cstring](g_status.tag_ids, tag.id)
         if id_index == -1:
           r.add(tag.title)
-        elif tag.dateGroupModified != status.tags[id_index].modified:
+        elif tag.dateGroupModified != g_status.tags[id_index].modified:
           r.add(tag.title)
 
       return r
@@ -129,7 +130,7 @@ when isMainModule:
       let msg = await sendPortMessage(p, "tag_inc|pocket,video,discard_tag")
       check msg != nil, "Can't connnect to sqlite_update native application"
 
-      status.config.discard_tags.add(@[@["discard_tag".cstring], @[
+      g_status.config.discard_tags.add(@[@["discard_tag".cstring], @[
           "pocket".cstring]])
 
       # tags that are part of bookmark
@@ -144,11 +145,11 @@ when isMainModule:
 
       let link_added = await waitForPocketLink()
       check link_added, "Could not get added pocket link. Either test timed out because adding link was taking too long or adding link failed on pocket side."
-      let pocket_status = cast[int](pocket_link.status)
-      check pocket_status == 1, "pocket_link status failed"
+      let pocket_status = cast[int](pocket_link.g_status)
+      check pocket_status == 1, "pocket_link g_status failed"
 
       # Check that link was added to pocket
-      let links_result = await retrieveLinks(status.config.access_token,
+      let links_result = await retrieveLinks(g_status.config.access_token,
           url_to_add)
       check links_result.isOk()
       let links = links_result.value()
@@ -166,10 +167,10 @@ when isMainModule:
       var action = newJsObject()
       action["action"] = "delete".cstring
       action["item_id"] = link_key
-      let del_result = await modifyLink(status.config.access_token, action)
+      let del_result = await modifyLink(g_status.config.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
-      let del_status = cast[int](del_value.status)
+      let del_status = cast[int](del_value.g_status)
       check del_status == 1
       let del_results = cast[seq[bool]](del_value.action_results)
       check del_results[0]
@@ -182,7 +183,7 @@ when isMainModule:
 
       # Make sure pocket link was deleted
       let links_empty_result = await retrieveLinks(
-          status.config.access_token, url_to_add)
+          g_status.config.access_token, url_to_add)
       check links_empty_result.isOk()
       let links_empty = links_empty_result.value()
       let list_empty = cast[seq[JsObject]](links_empty.list)
@@ -212,7 +213,7 @@ when isMainModule:
 
         block pocket_access_token:
           skip()
-          check status.config.access_token.len > 0, "'access_token' was not found in extension local storage"
+          check g_status.config.access_token.len > 0, "'access_token' was not found in extension local storage"
 
         block add_bookmark:
           skip()
@@ -222,15 +223,15 @@ when isMainModule:
     proc setup() {.async.} =
       await browser.storage.local.clear()
       console.info "Tests setup"
-      status = newStatus(
+      g_status = newStatus(
         config = newConfig(
           add_tags = @[@["pocket".cstring], @[
               "second".cstring, "third".cstring]]))
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
-      status.config.access_token = cast[cstring](local_value.access_token)
-      status.config.username = cast[cstring](local_value.username)
-      discard await browser.storage.local.set(cast[JsObject](status.config))
+      g_status.config.access_token = cast[cstring](local_value.access_token)
+      g_status.config.username = cast[cstring](local_value.username)
+      discard await browser.storage.local.set(cast[JsObject](g_status.config))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
       let tabs_opts = TabCreateProps(url: browser.runtime.getURL("options/options.html"))
@@ -238,7 +239,7 @@ when isMainModule:
 
     proc cleanup() {.async.} =
       console.info "Tests cleanup"
-      for id in status.tag_ids:
+      for id in g_status.tag_ids:
         await browser.bookmarks.remove(id)
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)
