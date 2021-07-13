@@ -97,8 +97,10 @@ proc reload*(tabs: Tabs, id: int, props: JsObject): Future[void]
 
 proc getURL*(runtime: Runtime, url: cstring): cstring
 proc addListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
+proc removeListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
 
 proc setIcon*(ba: BrowserAction, details: JsObject): Future[void]
+proc setTitle*(ba: BrowserAction, details: JsObject)
 proc setBadgeText*(ba: BrowserAction, details: BadgeText)
 proc setBadgeBackgroundColor*(ba: BrowserAction, details: BadgeBgColor)
 proc setBadgeTextColor*(ba: BrowserAction, details: BadgeTextColor)
@@ -114,8 +116,9 @@ proc addListener*(obj: StorageOnChanged, cb: proc(changes: JsObject,
     area_name: cstring))
 
 proc addListener*(r: RuntimeOnInstalled, cb: proc(details: InstalledDetails))
-proc sendMessage*(r: Runtime, message: cstring): Future[JsObject]
 proc addListener*(r: RuntimeOnMessage, cb: proc(msg: cstring))
+proc removeListener*(r: RuntimeOnMessage, cb: proc(msg: cstring))
+proc sendMessage*(r: Runtime, message: cstring): Future[JsObject]
 
 proc openOptionsPage*(r: Runtime): Future[void]
 

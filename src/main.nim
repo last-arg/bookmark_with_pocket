@@ -2,6 +2,7 @@ import jsffi, dom, asyncjs, jsconsole
 import results
 import pocket
 
+# TODO: remove code or whole file?
 proc eventPocketLogin(elem: Element)
 proc eventPocketLogout(elem: Element)
 

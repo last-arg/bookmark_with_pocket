@@ -11,8 +11,5 @@ is changed. When only tags field is changed there is no event fired.
 So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
 
-## TODO
- [ ] Make icon badge for pocket login. Make logo grayscale? 
-
 ## Resources
   - [Pocket authentication](https://blog.wilgucki.pl/oauth-authentication-without-browser/)

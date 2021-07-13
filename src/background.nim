@@ -7,8 +7,11 @@ var status = newStatus()
 when defined(testing):
   var pocket_link: JsObject = nil
 
-let empty_badge = newJsObject()
-empty_badge["path"] = "./assets/badge_empty.svg".cstring
+let badge_empty = newJsObject()
+badge_empty["path"] = "./assets/badge_empty.svg".cstring
+
+let badge_grayscale = newJsObject()
+badge_grayscale["path"] = "./assets/badge_grayscale.svg".cstring
 
 let badge = newJsObject()
 badge["path"] = "./assets/badge.svg".cstring
@@ -90,13 +93,29 @@ proc setBadgeNone(tab_id: int) =
   let text_detail = BadgeText(text: "", tabId: tab_id)
   browser.browserAction.setBadgeText(text_detail)
   badge["tabId"] = tab_id
-  discard browser.browserAction.setIcon(empty_badge)
+  let d = newJsObject()
+  d["title"] = jsNull
+  browser.browserAction.setTitle(d)
+  discard browser.browserAction.setIcon(badge_empty)
 
 proc setBadgeSuccess(tab_id: int) =
   let text_detail = BadgeText(text: "", tabId: tab_id)
   browser.browserAction.setBadgeText(text_detail)
   badge["tabId"] = tab_id
   discard browser.browserAction.setIcon(badge)
+
+proc setBadgeNotLoggedIn(tab_id: int, text: cstring = "") =
+  browser.browserAction.setBadgeBackgroundColor(
+    BadgeBgColor(color: "#FCA5A5", tabId: tab_id))
+  browser.browserAction.setBadgeTextColor(
+    BadgeTextColor(color: "#000000", tabId: tab_id))
+  let text_detail = BadgeText(text: text, tabId: tab_id)
+  browser.browserAction.setBadgeText(text_detail)
+  badge["tabId"] = tab_id
+  let ba_details = newJsObject()
+  ba_details["title"] = "Click to login to Pocket".cstring
+  browser.browserAction.setTitle(ba_details)
+  discard browser.browserAction.setIcon(badge_grayscale)
 
 proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
@@ -131,6 +150,64 @@ proc onCreateBookmark(bookmark: BookmarkTreeNode) {.async.} =
     when defined(testing):
       pocket_link = link_result.value()
 
+proc getCurrentTabId(): Future[int] {.async.} =
+  let query_opts = newJsObject()
+  query_opts["active"] = true
+  query_opts["currentWindow"] = true
+  let query_tabs = await browser.tabs.query(query_opts)
+  return query_tabs[0].id
+
+proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates()
+proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
+proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
+proc onMessageCommand(msg: cstring) =
+  if msg == "update_tags": discard asyncUpdateTagDates()
+
+proc deinitLoggedIn(id: int) =
+  setBadgeNotLoggedIn(id)
+  browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
+  browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
+  browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
+  browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
+  browser.runtime.onMessage.removeListener(onMessageCommand)
+
+proc initLoggedIn(tab_id: int) =
+  setBadgeNone(tab_id)
+  discard asyncUpdateTagDates()
+  browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
+  browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
+  browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
+  browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
+  browser.runtime.onMessage.addListener(onMessageCommand)
+
+proc badgePocketLogin(id: int) {.async.} =
+  let body_result = await authenticate()
+  if body_result.isErr():
+    console.error("Pocket authentication failed")
+    setBadgeNotLoggedIn(id, "fail".cstring)
+    return
+  # Deconstruct urlencoded data
+  let kvs = body_result.value.split("&")
+  var login_data = newJsObject()
+  const username = "username"
+  const access_token = "access_token"
+  login_data[access_token] = nil
+  login_data[username] = nil
+  for kv_str in kvs:
+    let kv = kv_str.split("=")
+    if kv[0] == access_token:
+      login_data[access_token] = kv[1]
+    elif kv[0] == username:
+      login_data[username] = kv[1]
+
+  if login_data[access_token] == nil:
+    console.error("Failed to get access_token form Pocket API response")
+    setBadgeNotLoggedIn(id, "fail".cstring)
+    return
+
+  discard await browser.storage.local.set(login_data)
+  initLoggedIn(id)
+
 proc initBackground*() {.async.} =
   console.log "BACKGROUND"
 
@@ -139,37 +216,23 @@ proc initBackground*() {.async.} =
     let query_opts = newJsObject()
     query_opts["url"] = "moz-extension://*/options/options.html".cstring
     let query_tabs = await browser.tabs.query(query_opts)
-    console.log query_tabs
     if query_tabs.len > 0:
       discard browser.tabs.reload(query_tabs[0].id, newJsObject())
 
-  discard browser.browserAction.setIcon(empty_badge)
-  discard await asyncUpdateTagDates()
-
   let storage = await browser.storage.local.get()
-  console.log storage
   status.config = cast[Config](storage)
 
-  # TODO: check that access_token exists and is valid
-  # Display different extension badge when no access_token
-  # Clicking on badge attempts Pocket authentication
-  # Text: Login to Pocket
-
-  browser.browserAction.onClicked.addListener(proc(tab: Tab) =
-    discard browser.runtime.openOptionsPage())
-
-  browser.bookmarks.onCreated.addListener(
-    proc(id: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark))
-
-  browser.bookmarks.onChanged.addListener(
-    proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
-
-  browser.bookmarks.onRemoved.addListener(
-    proc(id: cstring, obj: JsObject) = discard asyncUpdateTagDates())
-
-  browser.runtime.onMessage.addListener(proc(msg: cstring) =
-    if msg == "update_tags": discard asyncUpdateTagDates())
-
+  let tab_id = await getCurrentTabId()
+  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  console.log storage
+  console.log is_logged_in
+  if is_logged_in:
+    initLoggedIn(tab_id)
+  else:
+    setBadgeNotLoggedIn(tab_id)
+    browser.browserAction.onClicked.addListener(proc(tab: Tab) =
+      discard badgePocketLogin(tab.id)
+    )
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   console.log "ONINSTALLED EVENT"

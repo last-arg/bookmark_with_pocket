@@ -65,7 +65,7 @@
     "96": "assets/badge.svg"
   },
   "browser_action": {
-    "default_title": "Settings"
+    "default_title": "Open Settings"
   },
   "options_ui": {
     "page": "options/options.html",

@@ -82,6 +82,6 @@ proc getChildren*(bm: Bookmarks, id: cstring): Future[seq[BookmarkTreeNode]]
 proc get*(bm: Bookmarks, id: cstring): Future[seq[BookmarkTreeNode]]
 proc search*(bm: Bookmarks, query: BookMarksQuery): Future[seq[BookmarkTreeNode]]
 proc addListener*(bmc: BookmarksEvent, cb: proc(id: cstring,
-    bookmark: BookmarkTreeNode))
-proc addListener*(bmc: BookmarksEvent, cb: proc(id: cstring,
-    obj: JsObject))
+    bookmark: BookmarkTreeNode | JsObject))
+proc removeListener*(bmc: BookmarksEvent, cb: proc(id: cstring,
+    bookmark: BookmarkTreeNode | JsObject))

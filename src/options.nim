@@ -108,6 +108,7 @@ proc initLoginButton() =
       discard await browser.storage.local.set(login_data)
       initLogoutButton()
       js_login.classList.add("hidden")
+      # TODO: have to change extension badge
     discard asyncCb()
   , event_once_opt)
 
@@ -120,6 +121,7 @@ proc initLogoutButton() =
     initLoginButton()
     js_logout.classList.add("hidden")
   , event_once_opt)
+  # TODO: have to change extension badge
 
 proc init() {.async.} =
   console.log form_fields
@@ -127,7 +129,7 @@ proc init() {.async.} =
   console.log storage
   var config = cast[Config](storage)
 
-  if storage == jsUndefined or storage["access_token"] == jsUndefined:
+  if storage == jsUndefined and storage["access_token"] == jsUndefined:
     initLoginButton()
     console.warn("Could not find web extension local config. Generating new config")
     config = newConfig()
