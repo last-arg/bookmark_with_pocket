@@ -5,14 +5,12 @@ type
     modified*: int
     title*: cstring
 
-  Status* = ref StatusObj
-  StatusObj = object
+  StateData* = ref object of JsRoot
     tag_ids*: seq[cstring]
     tags*: seq[TagInfo]
     config*: Config
 
-  Config* = ref ConfigObj
-  ConfigObj* {.importc.} = object of RootObj
+  Config* = ref object of JsRoot
     access_token*: cstring
     username*: cstring
     always_add_tags*: bool
@@ -47,11 +45,11 @@ proc newConfig*(
       enable_discard_tags: enable_discard_tags,
       discard_tags: discard_tags)
 
-proc newStatus*(
+proc newStateData*(
     tag_ids: seq[cstring] = @[],
     tags: seq[TagInfo] = @[],
     config: Config = newConfig()
-  ): Status = Status(tag_ids: tag_ids, tags: tags, config: config)
+  ): StateData = StateData(tag_ids: tag_ids, tags: tags, config: config)
 
 proc get*[T](config: Config, key: cstring): T =
   cast[T](cast[JsObject](config)[key])

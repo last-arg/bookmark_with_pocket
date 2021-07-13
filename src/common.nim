@@ -1,12 +1,51 @@
 import jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
-import results, options
+import results, options, tables
+
+# TODO?: move state machine to background.nim?
+type
+  StateCb = proc(): void
+  Transition = tuple[next: State, cb: Option[StateCb]]
+  StateEvent = tuple[state: State, event: Event]
+  Machine* = ref object of RootObj
+    currentState: State
+    data: StateData
+    transitions: TableRef[StateEvent, Transition]
+
+  State = enum
+    InitialLoad
+    LoggedIn
+    LoggedOut
+
+  Event = enum
+    Login
+    Logout
+
+proc newMachine*(currentState = InitialLoad, data = newStateData(),
+    transitions = newTable[StateEvent, Transition]()): Machine =
+  Machine(currentState: currentState, data: data, transitions: transitions)
+
+proc addTransition*(m: Machine, state: State, event: Event, next: State,
+    cb: Option[StateCb] = none[StateCb]()) =
+  m.transitions[(state, event)] = (next, cb)
+
+proc getTransition*(m: Machine, s: State, e: Event): Transition =
+  let key = (s, e)
+  if m.transitions.hasKey(key):
+    return m.transitions[key]
+  else: console.error "Transition is not defined: Event(" & $e & ") State(" & $s & ")"
+
+proc transition*(m: Machine, event: Event) =
+  let t = m.getTransition(m.currentState, event)
+  if t.cb.isSome():
+    t.cb.unsafeGet()()
+  m.currentState = t.next
 
 # TODO: Try to move this to background.nim
-var g_status*: Status = nil
-  # TODO: try improve testing code
-  # Try to remove global variables like 'pocket_link'
+var g_status*: StateData = nil
+ # TODO: try improve testing code
+ # Try to remove global variables like 'pocket_link'
 when defined(testing):
   var pocket_link*: JsObject = nil
 

@@ -192,7 +192,7 @@ when isMainModule:
     proc setup() {.async.} =
       await browser.storage.local.clear()
       console.info "Tests setup"
-      g_status = newStatus(
+      g_status = newStateData(
         config = newConfig(
           add_tags = @[@["pocket".cstring], @[
               "second".cstring, "third".cstring]]))
