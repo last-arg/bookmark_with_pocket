@@ -184,17 +184,9 @@ proc onCreateBookmark*(bookmark: BookmarkTreeNode) {.async.} =
 proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates()
 proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
 proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
-proc onMessageCommand(msg: cstring) =
-  console.log "command"
-  if msg == "update_tags":
-    discard asyncUpdateTagDates()
-  elif msg == "login":
-    discard
-  elif msg == "logout":
-    discard
 
-proc deinitLoggedIn*(id: int) =
-  setBadgeNotLoggedIn()
+proc onMessageCommand(msg: cstring)
+proc deinitLoggedIn*() =
   browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
   browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
   browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
@@ -250,3 +242,13 @@ proc initLoggedOut*() =
 proc deinitLoggedOut*() =
   browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
 
+proc onMessageCommand(msg: cstring) =
+  console.log "command"
+  if msg == "update_tags":
+    discard asyncUpdateTagDates()
+  elif msg == "login":
+    deinitLoggedOut()
+    initLoggedIn()
+  elif msg == "logout":
+    deinitLoggedIn()
+    initLoggedOut()
