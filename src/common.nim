@@ -166,6 +166,7 @@ proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates
 proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
 proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
 proc onMessageCommand(msg: cstring) =
+  console.log "command"
   if msg == "update_tags": discard asyncUpdateTagDates()
 
 proc deinitLoggedIn*(id: int) =
@@ -184,3 +185,44 @@ proc initLoggedIn*(tab_id: int) =
   browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
   browser.runtime.onMessage.addListener(onMessageCommand)
+
+proc deinitLoggedOut*()
+proc badgePocketLogin(id: int) {.async.} =
+  let body_result = await authenticate()
+  if body_result.isErr():
+    console.error("Pocket authentication failed")
+    setBadgeNotLoggedIn(id, "fail".cstring)
+    return
+  # Deconstruct urlencoded data
+  let kvs = body_result.value.split("&")
+  var login_data = newJsObject()
+  const username = "username"
+  const access_token = "access_token"
+  login_data[access_token] = nil
+  login_data[username] = nil
+  for kv_str in kvs:
+    let kv = kv_str.split("=")
+    if kv[0] == access_token:
+      login_data[access_token] = kv[1]
+    elif kv[0] == username:
+      login_data[username] = kv[1]
+
+  if login_data[access_token] == nil:
+    console.error("Failed to get access_token form Pocket API response")
+    setBadgeNotLoggedIn(id, "fail".cstring)
+    return
+
+  discard await browser.storage.local.set(login_data)
+  deinitLoggedOut()
+  initLoggedIn(id)
+
+proc clickPocketLoginEvent(tab: Tab) =
+  discard badgePocketLogin(tab.id)
+
+proc initLoggedOut*(tab_id: int) =
+  setBadgeNotLoggedIn(tab_id)
+  browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
+
+proc deinitLoggedOut*() =
+  browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
+
