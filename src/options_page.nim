@@ -108,7 +108,7 @@ proc initLoginButton() =
       discard await browser.storage.local.set(login_data)
       initLogoutButton()
       js_login.classList.add("hidden")
-      # TODO: have to change extension badge
+      discard browser.runtime.sendMessage("login".cstring)
     discard asyncCb()
   , event_once_opt)
 
@@ -120,8 +120,8 @@ proc initLogoutButton() =
         "username".cstring])
     initLoginButton()
     js_logout.classList.add("hidden")
+    discard browser.runtime.sendMessage("logout".cstring)
   , event_once_opt)
-  # TODO: have to change extension badge
 
 proc init() {.async.} =
   console.log form_fields

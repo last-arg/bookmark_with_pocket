@@ -185,13 +185,12 @@ proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates
 proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
 proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
 
-proc onMessageCommand(msg: cstring)
+proc onMessageCommand*(msg: cstring)
 proc deinitLoggedIn*() =
   browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
   browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
   browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
-  browser.runtime.onMessage.removeListener(onMessageCommand)
 
 proc initLoggedIn*() =
   setBadgeNone(none[int]())
@@ -200,7 +199,6 @@ proc initLoggedIn*() =
   browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
   browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
-  browser.runtime.onMessage.addListener(onMessageCommand)
 
 proc deinitLoggedOut*()
 proc badgePocketLogin(id: int) {.async.} =
@@ -242,7 +240,7 @@ proc initLoggedOut*() =
 proc deinitLoggedOut*() =
   browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
 
-proc onMessageCommand(msg: cstring) =
+proc onMessageCommand*(msg: cstring) =
   console.log "command"
   if msg == "update_tags":
     discard asyncUpdateTagDates()

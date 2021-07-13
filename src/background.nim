@@ -17,12 +17,15 @@ proc initBackground*() {.async.} =
   let storage = await browser.storage.local.get()
   g_status.config = cast[Config](storage)
 
-  # let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
-  let is_logged_in = false
+  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  # let is_logged_in = true
   if is_logged_in:
     initLoggedIn()
   else:
     initLoggedOut()
+
+  browser.runtime.onMessage.addListener(onMessageCommand)
+
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   console.log "ONINSTALLED EVENT"
