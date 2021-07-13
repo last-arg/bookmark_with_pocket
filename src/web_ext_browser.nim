@@ -67,21 +67,6 @@ type
     onMessage*: PortEvent
     onDisconnect*: PortEvent
 
-  BadgeText* = ref BadgeTextObj
-  BadgeTextObj = object
-    text*: cstring
-    tabId*: int
-
-  BadgeBgColor* = ref BadgeBgColorObj
-  BadgeBgColorObj = object
-    color*: cstring
-    tabId*: int
-
-  BadgeTextColor* = ref BadgeTextColorObj
-  BadgeTextColorObj = object
-    color*: cstring
-    tabId*: int
-
   PortEvent = ref object
 
 
@@ -101,9 +86,9 @@ proc removeListener*(ba: BrowserActionClicked, cb: proc(tab: Tab))
 
 proc setIcon*(ba: BrowserAction, details: JsObject): Future[void]
 proc setTitle*(ba: BrowserAction, details: JsObject)
-proc setBadgeText*(ba: BrowserAction, details: BadgeText)
-proc setBadgeBackgroundColor*(ba: BrowserAction, details: BadgeBgColor)
-proc setBadgeTextColor*(ba: BrowserAction, details: BadgeTextColor)
+proc setBadgeText*(ba: BrowserAction, details: JsObject)
+proc setBadgeBackgroundColor*(ba: BrowserAction, details: JsObject)
+proc setBadgeTextColor*(ba: BrowserAction, details: JsObject)
 
 proc set*(storage_type: Local, keys: JsObject): Future[jsUndefined]
 proc get*(storage_type: Local, keys: JsObject | cstring | seq[cstring]): Future[

@@ -4,20 +4,20 @@ build-css:
 build-background:
   nim js -d:testing src/background.nim
 
-build-options:
-  nim js -d:testing src/options.nim
+build-options_page:
+  nim js -d:testing src/options_page.nim
 
 build-content:
   nim js -d:testing src/content_script.nim
 
 watch-js-content:
-  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options.nim' 'just build-content'
+  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options_page.nim' 'just build-content'
 
 watch-js:
-  watchexec -c -r -w ./src -e nim -i 'src/options.nim' -i 'src/content_script.nim' 'just build-background' &
-  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/content_script.nim' 'just build-options'
+  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' -i 'src/content_script.nim' 'just build-background' &
+  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/content_script.nim' 'just build-options_page'
 
-build-ext: build-background build-options
+build-ext: build-background build-options_page
   zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
 
 watch-build-ext:
@@ -29,7 +29,7 @@ geckodriver: build-ext
 watch-geckodriver:
   watchexec -c -r -w tests/ -w src/ -e nim 'just build-ext && just geckodriver'
 
-web-ext: build-background build-options
+web-ext: build-background build-options_page
   web-ext run --ignore-files=src/* nimcache/* tmp/* tmp/**/* bin/* native-messaging/* node_modules/* tests/* .direnv/* --pref=storage.sqlite.exclusiveLock.enabled=false -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
 
 setup-native-messaging:

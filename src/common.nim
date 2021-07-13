@@ -1,7 +1,7 @@
 import jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
-import results
+import results, options
 
 # TODO: Try to move this to background.nim
 var g_status*: Status = nil
@@ -20,42 +20,61 @@ let badge = newJsObject()
 badge["path"] = "./assets/badge.svg".cstring
 
 proc setBadgeLoading*(tab_id: int) =
-  browser.browserAction.setBadgeBackgroundColor(
-    BadgeBgColor(color: "#BFDBFE", tabId: tab_id))
-  browser.browserAction.setBadgeTextColor(
-    BadgeTextColor(color: "#000000", tabId: tab_id))
-  browser.browserAction.setBadgeText(BadgeText(text: "...", tabId: tab_id))
+  let bg_color = newJsObject()
+  bg_color["color"] = "#BFDBFE".cstring
+  bg_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  text_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeTextColor(text_color)
+  let b_text = newJsObject()
+  b_text["text"] = "...".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
 
 proc setBadgeFailed*(tab_id: int) =
-  browser.browserAction.setBadgeBackgroundColor(
-    BadgeBgColor(color: "#FCA5A5", tabId: tab_id))
-  browser.browserAction.setBadgeTextColor(
-    BadgeTextColor(color: "#000000", tabId: tab_id))
-  browser.browserAction.setBadgeText(BadgeText(text: "fail", tabId: tab_id))
+  let bg_color = newJsObject()
+  bg_color["color"] = "#FCA5A5".cstring
+  bg_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  text_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeTextColor(text_color)
+  let b_text = newJsObject()
+  b_text["text"] = "fail".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
 
-proc setBadgeNone*(tab_id: int) =
-  let text_detail = BadgeText(text: "", tabId: tab_id)
-  browser.browserAction.setBadgeText(text_detail)
-  badge["tabId"] = tab_id
+proc setBadgeNone*(tab_id: Option[int]) =
+  let b_text = newJsObject()
+  b_text["text"] = "".cstring
+  if isSome(tab_id): b_text["tab_id"] = tab_id.unsafeGet()
+  browser.browserAction.setBadgeText(b_text)
   let d = newJsObject()
   d["title"] = jsNull
   browser.browserAction.setTitle(d)
   discard browser.browserAction.setIcon(badge_empty)
 
 proc setBadgeSuccess*(tab_id: int) =
-  let text_detail = BadgeText(text: "", tabId: tab_id)
-  browser.browserAction.setBadgeText(text_detail)
+  let b_text = newJsObject()
+  b_text["text"] = "".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
   badge["tabId"] = tab_id
   discard browser.browserAction.setIcon(badge)
 
-proc setBadgeNotLoggedIn*(tab_id: int, text: cstring = "") =
-  browser.browserAction.setBadgeBackgroundColor(
-    BadgeBgColor(color: "#FCA5A5", tabId: tab_id))
-  browser.browserAction.setBadgeTextColor(
-    BadgeTextColor(color: "#000000", tabId: tab_id))
-  let text_detail = BadgeText(text: text, tabId: tab_id)
+proc setBadgeNotLoggedIn*(text: cstring = "") =
+  let bg_color = newJsObject()
+  bg_color["color"] = "#FCA5A5".cstring
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  browser.browserAction.setBadgeTextColor(text_color)
+  let text_detail = newJsObject()
+  text_detail["text"] = text
   browser.browserAction.setBadgeText(text_detail)
-  badge["tabId"] = tab_id
   let ba_details = newJsObject()
   ba_details["title"] = "Click to login to Pocket".cstring
   browser.browserAction.setTitle(ba_details)
@@ -136,7 +155,7 @@ proc onCreateBookmark*(bookmark: BookmarkTreeNode) {.async.} =
   query_opts["currentWindow"] = true
   let query_tabs = await browser.tabs.query(query_opts)
   let tab_id = query_tabs[0].id
-  setBadgeNone(tab_id)
+  setBadgeNone(some(tab_id))
 
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let added_tags = updateTagDates(tags)
@@ -167,18 +186,23 @@ proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
 proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) = discard onCreateBookmark(bookmark)
 proc onMessageCommand(msg: cstring) =
   console.log "command"
-  if msg == "update_tags": discard asyncUpdateTagDates()
+  if msg == "update_tags":
+    discard asyncUpdateTagDates()
+  elif msg == "login":
+    discard
+  elif msg == "logout":
+    discard
 
 proc deinitLoggedIn*(id: int) =
-  setBadgeNotLoggedIn(id)
+  setBadgeNotLoggedIn()
   browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
   browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
   browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
   browser.runtime.onMessage.removeListener(onMessageCommand)
 
-proc initLoggedIn*(tab_id: int) =
-  setBadgeNone(tab_id)
+proc initLoggedIn*() =
+  setBadgeNone(none[int]())
   discard asyncUpdateTagDates()
   browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
   browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
@@ -191,7 +215,7 @@ proc badgePocketLogin(id: int) {.async.} =
   let body_result = await authenticate()
   if body_result.isErr():
     console.error("Pocket authentication failed")
-    setBadgeNotLoggedIn(id, "fail".cstring)
+    setBadgeNotLoggedIn("fail".cstring)
     return
   # Deconstruct urlencoded data
   let kvs = body_result.value.split("&")
@@ -209,18 +233,18 @@ proc badgePocketLogin(id: int) {.async.} =
 
   if login_data[access_token] == nil:
     console.error("Failed to get access_token form Pocket API response")
-    setBadgeNotLoggedIn(id, "fail".cstring)
+    setBadgeNotLoggedIn("fail".cstring)
     return
 
   discard await browser.storage.local.set(login_data)
   deinitLoggedOut()
-  initLoggedIn(id)
+  initLoggedIn()
 
 proc clickPocketLoginEvent(tab: Tab) =
   discard badgePocketLogin(tab.id)
 
-proc initLoggedOut*(tab_id: int) =
-  setBadgeNotLoggedIn(tab_id)
+proc initLoggedOut*() =
+  setBadgeNotLoggedIn()
   browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
 
 proc deinitLoggedOut*() =
