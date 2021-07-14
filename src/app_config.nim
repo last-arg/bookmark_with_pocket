@@ -1,13 +1,9 @@
 import jsffi
 
 type
-  TagInfo* = ref object
-    modified*: int
-    title*: cstring
-
   StateData* = ref object of JsRoot
     tag_ids*: seq[cstring]
-    tags*: seq[TagInfo]
+    tag_timestamps*: seq[int]
     config*: Config
 
   Config* = ref object of JsRoot
@@ -47,9 +43,10 @@ proc newConfig*(
 
 proc newStateData*(
     tag_ids: seq[cstring] = @[],
-    tags: seq[TagInfo] = @[],
+    tag_timestamps: seq[int] = @[],
     config: Config = newConfig()
-  ): StateData = StateData(tag_ids: tag_ids, tags: tags, config: config)
+  ): StateData = return StateData(tag_ids: tag_ids,
+      tag_timestamps: tag_timestamps, config: config)
 
 proc get*[T](config: Config, key: cstring): T =
   cast[T](cast[JsObject](config)[key])

@@ -1,23 +1,309 @@
 import dom, jsffi, asyncjs
 import jsconsole
-import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket, common
-import results
+import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
+import results, options, tables
+
+type
+  StateCb* = proc(): void
+  Transition = tuple[next: State, cb: Option[StateCb]]
+  StateEvent = tuple[state: State, event: Event]
+  Machine* = ref object of JsRoot
+    currentState*: State
+    data*: StateData
+    transitions: TableRef[StateEvent, Transition]
+
+  State* = enum
+    InitialLoad
+    LoggedIn
+    LoggedOut
+
+  Event* = enum
+    Login
+    Logout
+
+proc newMachine*(currentState = InitialLoad, data = newStateData(),
+    transitions = newTable[StateEvent, Transition]()): Machine =
+  Machine(currentState: currentState, data: data, transitions: transitions)
+
+proc addTransition*(m: Machine, state: State, event: Event, next: State,
+    cb: Option[StateCb] = none[StateCb]()) =
+  m.transitions[(state, event)] = (next, cb)
+
+proc getTransition*(m: Machine, s: State, e: Event): Option[Transition] =
+  let key = (s, e)
+  if m.transitions.hasKey(key):
+    return some(m.transitions[key])
+  else:
+    none[Transition]()
+
+proc transition*(m: Machine, event: Event) =
+  let t_opt = m.getTransition(m.currentState, event)
+  if t_opt.isSome():
+    let t = t_opt.unsafeGet()
+    if t.cb.isSome():
+      t.cb.unsafeGet()()
+    m.currentState = t.next
+  else:
+    console.error "Transition is not defined: State(" & $m.currentState &
+        ") Event(" & $event & "). Staying in current state: " & $m.currentState
+
+let badge_empty = newJsObject()
+badge_empty["path"] = "./assets/badge_empty.svg".cstring
+
+let badge_grayscale = newJsObject()
+badge_grayscale["path"] = "./assets/badge_grayscale.svg".cstring
+
+let badge = newJsObject()
+badge["path"] = "./assets/badge.svg".cstring
+
+proc setBadgeLoading*(tab_id: int) =
+  let bg_color = newJsObject()
+  bg_color["color"] = "#BFDBFE".cstring
+  bg_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  text_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeTextColor(text_color)
+  let b_text = newJsObject()
+  b_text["text"] = "...".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
+
+proc setBadgeFailed*(tab_id: int) =
+  let bg_color = newJsObject()
+  bg_color["color"] = "#FCA5A5".cstring
+  bg_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  text_color["tab_id"] = tab_id
+  browser.browserAction.setBadgeTextColor(text_color)
+  let b_text = newJsObject()
+  b_text["text"] = "fail".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
+
+proc setBadgeNone*(tab_id: Option[int]) =
+  let b_text = newJsObject()
+  b_text["text"] = "".cstring
+  if isSome(tab_id): b_text["tab_id"] = tab_id.unsafeGet()
+  browser.browserAction.setBadgeText(b_text)
+  let d = newJsObject()
+  d["title"] = jsNull
+  browser.browserAction.setTitle(d)
+  discard browser.browserAction.setIcon(badge_empty)
+
+proc setBadgeSuccess*(tab_id: int) =
+  let b_text = newJsObject()
+  b_text["text"] = "".cstring
+  b_text["tab_id"] = tab_id
+  browser.browserAction.setBadgeText(b_text)
+  badge["tabId"] = tab_id
+  discard browser.browserAction.setIcon(badge)
+
+proc setBadgeNotLoggedIn*(text: cstring = "") =
+  let bg_color = newJsObject()
+  bg_color["color"] = "#FCA5A5".cstring
+  browser.browserAction.setBadgeBackgroundColor(bg_color)
+  let text_color = newJsObject()
+  text_color["color"] = "#000000".cstring
+  browser.browserAction.setBadgeTextColor(text_color)
+  let text_detail = newJsObject()
+  text_detail["text"] = text
+  browser.browserAction.setBadgeText(text_detail)
+  let ba_details = newJsObject()
+  ba_details["title"] = "Click to login to Pocket".cstring
+  browser.browserAction.setTitle(ba_details)
+  discard browser.browserAction.setIcon(badge_grayscale)
+
+proc updateTagDates*(out_data: StateData, tags: seq[BookmarkTreeNode]): seq[cstring] =
+  var r: seq[cstring] = @[]
+  for tag in tags:
+    let id_index = find[seq[cstring], cstring](out_data.tag_ids, tag.id)
+    if id_index == -1:
+      r.add(tag.title)
+      out_data.tag_ids.add(tag.id)
+      out_data.tag_timestamps.add(tag.dateGroupModified)
+      continue
+
+    if tag.dateGroupModified != out_data.tag_timestamps[id_index]:
+      r.add(tag.title)
+      out_data.tag_timestamps[id_index] = tag.dateGroupModified
+
+  return r
+
+proc filterTags*(tags: seq[cstring], allowed_tags, discard_tags: seq[
+    seq[cstring]]): seq[cstring] =
+  var new_tags = newSeq[cstring]()
+
+  if allowed_tags.len > 0:
+    for row in allowed_tags:
+      var has_tags = true
+      for item in row:
+        has_tags = has_tags and (item in tags)
+      if has_tags: new_tags.add(row)
+  elif discard_tags.len > 0:
+    var rem_tags = newSeq[cstring]()
+    for row in discard_tags:
+      var has_tags = true
+      for item in row:
+        has_tags = has_tags and (item in tags)
+      if has_tags: rem_tags.add(row)
+    new_tags = filter(tags, proc(item: cstring): bool = item notin rem_tags)
+  return new_tags
+
+proc hasNoAddTag*(tags: seq[cstring], no_add_tags: seq[seq[cstring]]): bool =
+  for row in no_add_tags:
+    var no_add = true
+    for item in row:
+      no_add = no_add and tags.contains(item)
+    if no_add: return true
+  return false
+
+proc hasAddTag*(tags: seq[cstring], add_tags: seq[seq[cstring]]): bool =
+  for row in add_tags:
+    var add = true
+    for item in row:
+      add = add and tags.contains(item)
+    if add: return true
+  return false
+
+proc asyncUpdateTagDates(out_data: StateData): Future[JsObject] {.async.} =
+  let tags = await browser.bookmarks.getChildren(tags_folder_id)
+  discard updateTagDates(out_data, tags)
+
+proc badgePocketLogin(machine: Machine, id: int) {.async.} =
+  let body_result = await authenticate()
+  if body_result.isErr():
+    console.error("Pocket authentication failed")
+    setBadgeNotLoggedIn("fail".cstring)
+    return
+  # Deconstruct urlencoded data
+  let kvs = body_result.value.split("&")
+  var login_data = newJsObject()
+  const username = "username"
+  const access_token = "access_token"
+  login_data[access_token] = nil
+  login_data[username] = nil
+  for kv_str in kvs:
+    let kv = kv_str.split("=")
+    if kv[0] == access_token:
+      login_data[access_token] = kv[1]
+    elif kv[0] == username:
+      login_data[username] = kv[1]
+
+  if login_data[access_token] == nil:
+    console.error("Failed to get access_token form Pocket API response")
+    setBadgeNotLoggedIn("fail".cstring)
+    return
+
+  discard await browser.storage.local.set(login_data)
+  machine.transition(Login)
+
+proc onCreateBookmark*(in_data: StateData, bookmark: BookmarkTreeNode) {.async.} =
+  if bookmark.`type` != "bookmark": return
+  let query_opts = newJsObject()
+  query_opts["active"] = true
+  query_opts["currentWindow"] = true
+  let query_tabs = await browser.tabs.query(query_opts)
+  let tab_id = query_tabs[0].id
+  setBadgeNone(some(tab_id))
+
+  let tags = await browser.bookmarks.getChildren(tags_folder_id)
+  # TODO: replace newStateData with real data from machine
+  let added_tags = updateTagDates(newStateData(), tags)
+
+  if hasNoAddTag(added_tags, in_data.config.no_add_tags):
+    return
+
+  if in_data.config.always_add_tags or hasAddTag(added_tags,
+      in_data.config.add_tags):
+    setBadgeLoading(tab_id)
+    let filtered_tags = filterTags(added_tags, in_data.config.allowed_tags,
+        in_data.config.discard_tags)
+    let link_result = await addLink(bookmark.url,
+        in_data.config.access_token, filtered_tags)
+    if link_result.isErr():
+      console.error "Failed to add bookmark to Pocket. Error type: " &
+          $link_result.error()
+      setBadgeFailed(tab_id)
+      return
+
+    setBadgeSuccess(tab_id)
 
 proc initBackground*() {.async.} =
   console.log "BACKGROUND"
 
   let storage = await browser.storage.local.get()
-  g_status.config = cast[Config](storage)
+  let state_data: StateData = newStateData(config = cast[Config](storage))
+  let machine = newMachine(data = state_data)
 
-  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
-  # let is_logged_in = true
-  if is_logged_in:
+  proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
+  proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
+  proc onCreateBookmarkEvent(_: cstring,
+      bookmark: BookmarkTreeNode) = discard onCreateBookmark(machine.data, bookmark)
+
+  proc initLoggedIn() =
+    # TODO: get and set new machine.data.config.access_token/username values
+    setBadgeNone(none[int]())
+    discard asyncUpdateTagDates(machine.data)
+    browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
+    browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
+    browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
+    browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
+
+  proc deinitLoggedIn() =
+    browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
+    browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
+    browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
+    browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
+
+  proc clickPocketLoginEvent(tab: Tab) =
+    discard badgePocketLogin(machine, tab.id)
+
+  proc initLoggedOut() =
+    setBadgeNotLoggedIn()
+    browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
+
+  proc deinitLoggedOut() =
+    browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
+
+  machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc() =
+    console.log "STATE: InitialLoad -> LoggedIn"
     initLoggedIn()
-  else:
+  ))
+  machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc() =
+    console.log "STATE: InitialLoad -> LoggedOut"
     initLoggedOut()
+  ))
+  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc() =
+    console.log "STATE: LoggedIn -> LoggedOut"
+    deinitLoggedOut()
+    initLoggedIn()
+  ))
+  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc() =
+    console.log "STATE: LoggedOut -> LoggedIn"
+    deinitLoggedIn()
+    initLoggedOut()
+  ))
+  # let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  let is_logged_in = false
+  if is_logged_in:
+    machine.transition(Login)
+  else:
+    machine.transition(Logout)
+
+  proc onMessageCommand(msg: cstring) =
+    console.log "command"
+    if machine.currentState == LoggedIn and msg == "update_tags":
+      discard asyncUpdateTagDates(machine.data)
+    elif msg == "login":
+      machine.transition(Login)
+    elif msg == "logout":
+      machine.transition(Logout)
 
   browser.runtime.onMessage.addListener(onMessageCommand)
-
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   if details.reason == "install":
@@ -33,11 +319,16 @@ when isMainModule:
     console.log "BACKGROUND RELEASE BUILD"
     discard initBackground()
 
+  # TODO: rewrite test after adding state machine
   when defined(testing):
     import balls, jscore, web_ext_browser
 
-    # IMPORTANT: Test functions use global variable 'g_status'
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
+    # TODO: remove this after test code is fixed
+    var g_status*: StateData = nil
+    # TODO?: remove this after test code is fixed?
+    # Add field to Machine type when testing?
+    var pocket_link*: JsObject = nil
 
     proc createTags(tags: seq[cstring]): Future[void] {.async.} =
       for tag in tags:
@@ -51,7 +342,7 @@ when isMainModule:
         let id_index = find[seq[cstring], cstring](g_status.tag_ids, tag.id)
         if id_index == -1:
           r.add(tag.title)
-        elif tag.dateGroupModified != g_status.tags[id_index].modified:
+        elif tag.dateGroupModified != g_status.tag_timestamps[id_index]:
           r.add(tag.title)
 
       return r
