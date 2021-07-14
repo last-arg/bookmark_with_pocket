@@ -54,6 +54,7 @@ type
 
   TabCreateProps* = ref TabCreatePropsObj
   TabCreatePropsObj = object
+    active*: bool
     url*: cstring
 
   TabQuery* = ref TabQueryObj

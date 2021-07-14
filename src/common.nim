@@ -13,12 +13,12 @@ type
     data: StateData
     transitions: TableRef[StateEvent, Transition]
 
-  State = enum
+  State* = enum
     InitialLoad
     LoggedIn
     LoggedOut
 
-  Event = enum
+  Event* = enum
     Login
     Logout
 
@@ -44,8 +44,8 @@ proc transition*(m: Machine, event: Event) =
 
 # TODO: Try to move this to background.nim
 var g_status*: StateData = nil
- # TODO: try improve testing code
- # Try to remove global variables like 'pocket_link'
+  # TODO: try improve testing code
+  # Try to remove global variables like 'pocket_link'
 when defined(testing):
   var pocket_link*: JsObject = nil
 

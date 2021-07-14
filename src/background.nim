@@ -6,14 +6,6 @@ import results
 proc initBackground*() {.async.} =
   console.log "BACKGROUND"
 
-  when defined(testing):
-    # await browser.runtime.openOptionsPage()
-    let query_opts = newJsObject()
-    query_opts["url"] = "moz-extension://*/options/options.html".cstring
-    let query_tabs = await browser.tabs.query(query_opts)
-    if query_tabs.len > 0:
-      discard browser.tabs.reload(query_tabs[0].id, newJsObject())
-
   let storage = await browser.storage.local.get()
   g_status.config = cast[Config](storage)
 
@@ -28,12 +20,10 @@ proc initBackground*() {.async.} =
 
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
-  console.log "ONINSTALLED EVENT"
   if details.reason == "install":
     proc install() {.async.} =
       let local_data = cast[JsObject](newConfig())
       discard await browser.storage.local.set(local_data)
-      console.log "set storage.local"
       await browser.runtime.openOptionsPage()
     discard install()
 )
@@ -203,7 +193,7 @@ when isMainModule:
       discard await browser.storage.local.set(cast[JsObject](g_status.config))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
-      let tabs_opts = TabCreateProps(url: browser.runtime.getURL("options/options.html"))
+      let tabs_opts = TabCreateProps(active: false, url: browser.runtime.getURL("options/options.html"))
       discard browser.tabs.create(tabs_opts)
 
     proc cleanup() {.async.} =
