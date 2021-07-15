@@ -21,12 +21,12 @@ type
     Login
     Logout
 
-proc newMachine*(currentState = InitialLoad, data = newStateData(),
-    transitions = newTable[StateEvent, Transition]()): Machine =
+proc newMachine*(currentState = InitialLoad, data = newStateData(), transitions = newTable[
+    StateEvent, Transition]()): Machine =
   Machine(currentState: currentState, data: data, transitions: transitions)
 
-proc addTransition*(m: Machine, state: State, event: Event, next: State,
-    cb: Option[StateCb] = none[StateCb]()) =
+proc addTransition*(m: Machine, state: State, event: Event, next: State, cb: Option[StateCb] = none[
+    StateCb]()) =
   m.transitions[(state, event)] = (next, cb)
 
 proc getTransition*(m: Machine, s: State, e: Event): Option[Transition] =
@@ -236,12 +236,8 @@ proc asyncUpdateLoginConfig(config: Config) {.async.} =
       "username".cstring])
   console.log "update config", info
 
-proc initBackground*() {.async.} =
-  console.log "BACKGROUND"
-
-  let storage = await browser.storage.local.get()
-  let state_data: StateData = newStateData(config = cast[Config](storage))
-  let machine = newMachine(data = state_data)
+func createBackgroundMachine(data: StateData): Machine =
+  let machine = newMachine(data = data)
 
   proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
@@ -274,8 +270,7 @@ proc initBackground*() {.async.} =
     browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
     browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
 
-  proc clickPocketLoginEvent(tab: Tab) =
-    discard badgePocketLogin(machine, tab.id)
+  proc clickPocketLoginEvent(tab: Tab) = discard badgePocketLogin(machine, tab.id)
 
   proc initLoggedOut() =
     const empty_string = "".cstring
@@ -293,28 +288,32 @@ proc initBackground*() {.async.} =
   proc deinitLoggedOut() =
     browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
 
-  machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc(
-      param: JsObject) =
+  machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc(param: JsObject) =
     console.log "STATE: InitialLoad -> LoggedIn"
     initLoggedIn(param)
   ))
-  machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc(
-      param: JsObject) =
+  machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc(_: JsObject) =
     console.log "STATE: InitialLoad -> LoggedOut"
     initLoggedOut()
   ))
-  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc(
-      param: JsObject) =
+  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc(param: JsObject) =
     console.log "STATE: LoggedIn -> LoggedOut"
     deinitLoggedOut()
     initLoggedIn(param)
   ))
-  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(
-      param: JsObject) =
+  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(_: JsObject) =
     console.log "STATE: LoggedOut -> LoggedIn"
     deinitLoggedIn()
     initLoggedOut()
   ))
+
+  return machine
+
+proc initBackground*() {.async.} =
+  console.log "BACKGROUND"
+  let storage = await browser.storage.local.get()
+  let state_data: StateData = newStateData(config = cast[Config](storage))
+  let machine = createBackgroundMachine(state_data)
   # let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
   let is_logged_in = true
   if is_logged_in:
