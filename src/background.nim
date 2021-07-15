@@ -4,7 +4,7 @@ import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import results, options, tables
 
 type
-  StateCb* = proc(): void
+  StateCb* = proc(param: JsObject): void
   Transition = tuple[next: State, cb: Option[StateCb]]
   StateEvent = tuple[state: State, event: Event]
   Machine* = ref object of JsRoot
@@ -36,12 +36,12 @@ proc getTransition*(m: Machine, s: State, e: Event): Option[Transition] =
   else:
     none[Transition]()
 
-proc transition*(m: Machine, event: Event) =
+proc transition*(m: Machine, event: Event, param: JsObject = nil) =
   let t_opt = m.getTransition(m.currentState, event)
   if t_opt.isSome():
     let t = t_opt.unsafeGet()
     if t.cb.isSome():
-      t.cb.unsafeGet()()
+      t.cb.unsafeGet()(param)
     m.currentState = t.next
   else:
     console.error "Transition is not defined: State(" & $m.currentState &
@@ -201,7 +201,7 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
   discard await browser.storage.local.set(login_data)
   machine.transition(Login)
 
-proc onCreateBookmark*(in_data: StateData, bookmark: BookmarkTreeNode) {.async.} =
+proc onCreateBookmark*(out_data: StateData, bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
   let query_opts = newJsObject()
   query_opts["active"] = true
@@ -211,19 +211,18 @@ proc onCreateBookmark*(in_data: StateData, bookmark: BookmarkTreeNode) {.async.}
   setBadgeNone(some(tab_id))
 
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
-  # TODO: replace newStateData with real data from machine
-  let added_tags = updateTagDates(newStateData(), tags)
+  let added_tags = updateTagDates(out_data, tags)
 
-  if hasNoAddTag(added_tags, in_data.config.no_add_tags):
+  if hasNoAddTag(added_tags, out_data.config.no_add_tags):
     return
 
-  if in_data.config.always_add_tags or hasAddTag(added_tags,
-      in_data.config.add_tags):
+  if out_data.config.always_add_tags or hasAddTag(added_tags,
+      out_data.config.add_tags):
     setBadgeLoading(tab_id)
-    let filtered_tags = filterTags(added_tags, in_data.config.allowed_tags,
-        in_data.config.discard_tags)
+    let filtered_tags = filterTags(added_tags, out_data.config.allowed_tags,
+        out_data.config.discard_tags)
     let link_result = await addLink(bookmark.url,
-        in_data.config.access_token, filtered_tags)
+        out_data.config.access_token, filtered_tags)
     if link_result.isErr():
       console.error "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
@@ -231,6 +230,11 @@ proc onCreateBookmark*(in_data: StateData, bookmark: BookmarkTreeNode) {.async.}
       return
 
     setBadgeSuccess(tab_id)
+
+proc asyncUpdateLoginConfig(config: Config) {.async.} =
+  let info = await browser.storage.local.get(@["access_token".cstring,
+      "username".cstring])
+  console.log "update config", info
 
 proc initBackground*() {.async.} =
   console.log "BACKGROUND"
@@ -244,10 +248,21 @@ proc initBackground*() {.async.} =
   proc onCreateBookmarkEvent(_: cstring,
       bookmark: BookmarkTreeNode) = discard onCreateBookmark(machine.data, bookmark)
 
-  proc initLoggedIn() =
-    # TODO: get and set new machine.data.config.access_token/username values
-    setBadgeNone(none[int]())
+  proc initLoggedIn(param: JsObject) =
+    let username = cast[cstring](param.username)
+    let access_token = cast[cstring](param.access_token)
+    # Set browser local storage
+    let login_info = newJsObject()
+    login_info.username = username
+    login_info.access_token = access_token
+    discard browser.storage.local.set(login_info)
+
+    # Set current config
+    machine.data.config.username = username
+    machine.data.config.access_token = access_token
+
     discard asyncUpdateTagDates(machine.data)
+    setBadgeNone(none[int]())
     browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
     browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
     browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
@@ -263,44 +278,58 @@ proc initBackground*() {.async.} =
     discard badgePocketLogin(machine, tab.id)
 
   proc initLoggedOut() =
+    const empty_string = "".cstring
+    let login_info = newJsObject()
+    # Set browser local storage
+    login_info.username = empty_string
+    login_info.access_token = empty_string
+    discard browser.storage.local.set(login_info)
+    # Set current config
+    machine.data.config.username = empty_string
+    machine.data.config.access_token = empty_string
     setBadgeNotLoggedIn()
     browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
 
   proc deinitLoggedOut() =
     browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
 
-  machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc() =
+  machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc(
+      param: JsObject) =
     console.log "STATE: InitialLoad -> LoggedIn"
-    initLoggedIn()
+    initLoggedIn(param)
   ))
-  machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc() =
+  machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc(
+      param: JsObject) =
     console.log "STATE: InitialLoad -> LoggedOut"
     initLoggedOut()
   ))
-  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc() =
+  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc(
+      param: JsObject) =
     console.log "STATE: LoggedIn -> LoggedOut"
     deinitLoggedOut()
-    initLoggedIn()
+    initLoggedIn(param)
   ))
-  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc() =
+  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(
+      param: JsObject) =
     console.log "STATE: LoggedOut -> LoggedIn"
     deinitLoggedIn()
     initLoggedOut()
   ))
   # let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
-  let is_logged_in = false
+  let is_logged_in = true
   if is_logged_in:
-    machine.transition(Login)
+    machine.transition(Login, storage)
   else:
     machine.transition(Logout)
 
-  proc onMessageCommand(msg: cstring) =
+  proc onMessageCommand(msg: JsObject) =
     console.log "command"
-    if machine.currentState == LoggedIn and msg == "update_tags":
+    let cmd = cast[cstring](msg.cmd)
+    if machine.currentState == LoggedIn and cmd == "update_tags":
       discard asyncUpdateTagDates(machine.data)
-    elif msg == "login":
-      machine.transition(Login)
-    elif msg == "logout":
+    elif cmd == "login":
+      machine.transition(Login, msg.data)
+    elif cmd == "logout":
       machine.transition(Logout)
 
   browser.runtime.onMessage.addListener(onMessageCommand)

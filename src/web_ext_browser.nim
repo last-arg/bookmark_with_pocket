@@ -102,9 +102,10 @@ proc addListener*(obj: StorageOnChanged, cb: proc(changes: JsObject,
     area_name: cstring))
 
 proc addListener*(r: RuntimeOnInstalled, cb: proc(details: InstalledDetails))
-proc addListener*(r: RuntimeOnMessage, cb: proc(msg: cstring))
+proc addListener*(r: RuntimeOnMessage, cb: proc(msg: JsObject))
+proc removeListener*(r: RuntimeOnMessage, cb: proc(msg: JsObject))
 proc removeListener*(r: RuntimeOnMessage, cb: proc(msg: cstring))
-proc sendMessage*(r: Runtime, message: cstring): Future[JsObject]
+proc sendMessage*(r: Runtime, message: JsObject): Future[JsObject]
 
 proc openOptionsPage*(r: Runtime): Future[void]
 

@@ -105,10 +105,12 @@ proc initLoginButton() =
         initLoginButton()
         return
 
-      discard await browser.storage.local.set(login_data)
       initLogoutButton()
       js_login.classList.add("hidden")
-      discard browser.runtime.sendMessage("login".cstring)
+      let msg = newJsObject()
+      msg["cmd"] = "login".cstring
+      msg["data"] = login_data
+      discard browser.runtime.sendMessage(msg)
     discard asyncCb()
   , event_once_opt)
 
@@ -116,11 +118,14 @@ proc initLogoutButton() =
   let js_logout = document.querySelector(".js-logout")
   js_logout.classList.remove("hidden")
   js_logout.addEventListener("click", proc(_: Event) =
+    # TODO?: instead set access_token and username to empty string?
     discard browser.storage.local.remove(@["access_token".cstring,
         "username".cstring])
     initLoginButton()
     js_logout.classList.add("hidden")
-    discard browser.runtime.sendMessage("logout".cstring)
+    let msg = newJsObject()
+    msg["cmd"] = "logout".cstring
+    discard browser.runtime.sendMessage(msg)
   , event_once_opt)
 
 proc init() {.async.} =
