@@ -296,15 +296,15 @@ func createBackgroundMachine(data: StateData): Machine =
     console.log "STATE: InitialLoad -> LoggedOut"
     initLoggedOut()
   ))
-  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc(param: JsObject) =
+  machine.addTransition(LoggedIn, Logout, LoggedOut, some[StateCb](proc(_: JsObject) =
     console.log "STATE: LoggedIn -> LoggedOut"
-    deinitLoggedOut()
-    initLoggedIn(param)
-  ))
-  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(_: JsObject) =
-    console.log "STATE: LoggedOut -> LoggedIn"
     deinitLoggedIn()
     initLoggedOut()
+  ))
+  machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(param: JsObject) =
+    console.log "STATE: LoggedOut -> LoggedIn"
+    deinitLoggedOut()
+    initLoggedIn(param)
   ))
 
   return machine
@@ -492,7 +492,7 @@ when isMainModule:
           check test_machine.data.config.access_token.len > 0, "'access_token' was not found in extension's local storage"
 
         block add_bookmark:
-          # skip()
+          skip()
           await testAddBookMark()
 
 
