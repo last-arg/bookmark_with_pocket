@@ -243,7 +243,7 @@ func createBackgroundMachine(data: StateData): Machine =
   var machine = newMachine(data = data)
 
   proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
-  proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) {.closure.} =
+  proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) =
     discard onCreateBookmark(machine, bookmark)
 
   proc initLoggedIn(param: JsObject) =
@@ -323,9 +323,6 @@ proc initBackground*() {.async.} =
     machine.transition(Logout)
 
   proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
-  browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
-  browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
-
   proc onMessageCommand(msg: JsObject) =
     let cmd = cast[cstring](msg.cmd)
     if machine.currentState == LoggedIn and cmd == "update_tags":
@@ -338,6 +335,8 @@ proc initBackground*() {.async.} =
       console.log "COMMAND: logout"
       machine.transition(Logout)
 
+  browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
+  browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
   browser.runtime.onMessage.addListener(onMessageCommand)
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
@@ -517,9 +516,9 @@ when isMainModule:
     proc cleanup() {.async.} =
       console.info "TEST: Cleanup"
       for id in test_machine.data.tag_ids:
-        await browser.bookmarks.remove(id)
+        discard browser.bookmarks.remove(id)
       for id in created_bk_ids:
-        await browser.bookmarks.remove(id)
+        discard browser.bookmarks.remove(id)
 
     proc runTestSuite() {.async, discardable.} =
       console.info "TEST: Start"
