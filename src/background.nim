@@ -11,6 +11,8 @@ type
     currentState*: State
     data*: StateData
     transitions: TableRef[StateEvent, Transition]
+    when defined(testing):
+      test_data*: JsObject
 
   State* = enum
     InitialLoad
@@ -23,7 +25,11 @@ type
 
 proc newMachine*(currentState = InitialLoad, data = newStateData(), transitions = newTable[
     StateEvent, Transition]()): Machine =
-  Machine(currentState: currentState, data: data, transitions: transitions)
+  when defined(testing):
+    Machine(currentState: currentState, data: data, transitions: transitions,
+        test_data: newJsObject())
+  else:
+    Machine(currentState: currentState, data: data, transitions: transitions, )
 
 proc addTransition*(m: Machine, state: State, event: Event, next: State, cb: Option[StateCb] = none[
     StateCb]()) =
@@ -59,35 +65,35 @@ badge["path"] = "./assets/badge.svg".cstring
 proc setBadgeLoading*(tab_id: int) =
   let bg_color = newJsObject()
   bg_color["color"] = "#BFDBFE".cstring
-  bg_color["tab_id"] = tab_id
+  bg_color["tabId"] = tab_id
   browser.browserAction.setBadgeBackgroundColor(bg_color)
   let text_color = newJsObject()
   text_color["color"] = "#000000".cstring
-  text_color["tab_id"] = tab_id
+  text_color["tabId"] = tab_id
   browser.browserAction.setBadgeTextColor(text_color)
   let b_text = newJsObject()
   b_text["text"] = "...".cstring
-  b_text["tab_id"] = tab_id
+  b_text["tabId"] = tab_id
   browser.browserAction.setBadgeText(b_text)
 
 proc setBadgeFailed*(tab_id: int) =
   let bg_color = newJsObject()
   bg_color["color"] = "#FCA5A5".cstring
-  bg_color["tab_id"] = tab_id
+  bg_color["tabId"] = tab_id
   browser.browserAction.setBadgeBackgroundColor(bg_color)
   let text_color = newJsObject()
   text_color["color"] = "#000000".cstring
-  text_color["tab_id"] = tab_id
+  text_color["tabId"] = tab_id
   browser.browserAction.setBadgeTextColor(text_color)
   let b_text = newJsObject()
   b_text["text"] = "fail".cstring
-  b_text["tab_id"] = tab_id
+  b_text["tabId"] = tab_id
   browser.browserAction.setBadgeText(b_text)
 
 proc setBadgeNone*(tab_id: Option[int]) =
   let b_text = newJsObject()
   b_text["text"] = "".cstring
-  if isSome(tab_id): b_text["tab_id"] = tab_id.unsafeGet()
+  if isSome(tab_id): b_text["tabId"] = tab_id.unsafeGet()
   browser.browserAction.setBadgeText(b_text)
   let d = newJsObject()
   d["title"] = jsNull
@@ -97,7 +103,7 @@ proc setBadgeNone*(tab_id: Option[int]) =
 proc setBadgeSuccess*(tab_id: int) =
   let b_text = newJsObject()
   b_text["text"] = "".cstring
-  b_text["tab_id"] = tab_id
+  b_text["tabId"] = tab_id
   browser.browserAction.setBadgeText(b_text)
   badge["tabId"] = tab_id
   discard browser.browserAction.setIcon(badge)
@@ -201,8 +207,9 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
   discard await browser.storage.local.set(login_data)
   machine.transition(Login)
 
-proc onCreateBookmark*(out_data: StateData, bookmark: BookmarkTreeNode) {.async.} =
+proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
+  let out_data = out_machine.data
   let query_opts = newJsObject()
   query_opts["active"] = true
   query_opts["currentWindow"] = true
@@ -221,8 +228,7 @@ proc onCreateBookmark*(out_data: StateData, bookmark: BookmarkTreeNode) {.async.
     setBadgeLoading(tab_id)
     let filtered_tags = filterTags(added_tags, out_data.config.allowed_tags,
         out_data.config.discard_tags)
-    let link_result = await addLink(bookmark.url,
-        out_data.config.access_token, filtered_tags)
+    let link_result = await addLink(bookmark.url, out_data.config.access_token, filtered_tags)
     if link_result.isErr():
       console.error "Failed to add bookmark to Pocket. Error type: " &
           $link_result.error()
@@ -230,19 +236,18 @@ proc onCreateBookmark*(out_data: StateData, bookmark: BookmarkTreeNode) {.async.
       return
 
     setBadgeSuccess(tab_id)
-
-proc asyncUpdateLoginConfig(config: Config) {.async.} =
-  let info = await browser.storage.local.get(@["access_token".cstring,
-      "username".cstring])
-  console.log "update config", info
+    when defined(testing):
+      out_machine.test_data["pocket"] = link_result.unsafeGet()
 
 func createBackgroundMachine(data: StateData): Machine =
-  let machine = newMachine(data = data)
+  var machine = newMachine(data = data)
 
-  proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
+  # TODO?: depending on state change bookmarks onCreate callback function
+  # LoggedIn -> onCreateBookmarkEvent
+  # Other states -> asyncUpdateTagDates
   proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
-  proc onCreateBookmarkEvent(_: cstring,
-      bookmark: BookmarkTreeNode) = discard onCreateBookmark(machine.data, bookmark)
+  proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) {.closure.} =
+    discard onCreateBookmark(machine, bookmark)
 
   proc initLoggedIn(param: JsObject) =
     let username = cast[cstring](param.username)
@@ -257,18 +262,13 @@ func createBackgroundMachine(data: StateData): Machine =
     machine.data.config.username = username
     machine.data.config.access_token = access_token
 
-    discard asyncUpdateTagDates(machine.data)
     setBadgeNone(none[int]())
     browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
     browser.bookmarks.onCreated.addListener(onCreateBookmarkEvent)
-    browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
-    browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
 
   proc deinitLoggedIn() =
     browser.browserAction.onClicked.removeListener(onOpenOptionPageEvent)
     browser.bookmarks.onCreated.removeListener(onCreateBookmarkEvent)
-    browser.bookmarks.onChanged.removeListener(onUpdateTagsEvent)
-    browser.bookmarks.onRemoved.removeListener(onUpdateTagsEvent)
 
   proc clickPocketLoginEvent(tab: Tab) = discard badgePocketLogin(machine, tab.id)
 
@@ -310,25 +310,32 @@ func createBackgroundMachine(data: StateData): Machine =
   return machine
 
 proc initBackground*() {.async.} =
-  console.log "BACKGROUND"
   let storage = await browser.storage.local.get()
   let state_data: StateData = newStateData(config = cast[Config](storage))
   let machine = createBackgroundMachine(state_data)
-  # let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
-  let is_logged_in = true
+  discard asyncUpdateTagDates(machine.data)
+
+  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  # let is_logged_in = true
   if is_logged_in:
     machine.transition(Login, storage)
   else:
     machine.transition(Logout)
 
+  proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
+  browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
+  browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
+
   proc onMessageCommand(msg: JsObject) =
-    console.log "command"
     let cmd = cast[cstring](msg.cmd)
     if machine.currentState == LoggedIn and cmd == "update_tags":
+      console.log "COMMAND: update_tags"
       discard asyncUpdateTagDates(machine.data)
     elif cmd == "login":
+      console.log "COMMAND: login"
       machine.transition(Login, msg.data)
     elif cmd == "logout":
+      console.log "COMMAND: logout"
       machine.transition(Logout)
 
   browser.runtime.onMessage.addListener(onMessageCommand)
@@ -345,51 +352,25 @@ browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
 when isMainModule:
   when defined(release):
     console.log "BACKGROUND RELEASE BUILD"
+    let machine = create
     discard initBackground()
 
-  # TODO: rewrite test after adding state machine
   when defined(testing):
-    import balls, jscore, web_ext_browser
+    import balls, jscore
 
     console.log "BACKGROUND TESTING(DEBUG) BUILD"
-    # TODO: remove this after test code is fixed
-    var g_status*: StateData = nil
-    # TODO?: remove this after test code is fixed?
-    # Add field to Machine type when testing?
-    var pocket_link*: JsObject = nil
-
-    proc createTags(tags: seq[cstring]): Future[void] {.async.} =
-      for tag in tags:
-        let details = newCreateDetails(title = tag, `type` = "folder",
-            parentId = tags_folder_id)
-        let tag = await browser.bookmarks.create(details)
-
-    proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
-      var r: seq[cstring] = @[]
-      for tag in tags:
-        let id_index = find[seq[cstring], cstring](g_status.tag_ids, tag.id)
-        if id_index == -1:
-          r.add(tag.title)
-        elif tag.dateGroupModified != g_status.tag_timestamps[id_index]:
-          r.add(tag.title)
-
-      return r
-
-    proc getAddedTagsAsync(): Future[seq[cstring]] {.async.} =
-      let tags = await browser.bookmarks.getChildren(tags_folder_id)
-      return getAddedTags(tags)
+    var test_machine: Machine = nil
 
     proc waitForPocketLink(): Future[bool] =
       let p = newPromise(proc(resolve: proc(resp: bool)) =
         let start = Date.now()
         const max_wait_time = 2000 # milliseconds
-        proc checkPocketLink()
         proc checkPocketLink() =
-          let elapsed_seconds = Date.now() - start
-          if not isNull(pocket_link):
+          if not isUndefined(test_machine.test_data["pocket"]):
             resolve(true)
             return
 
+          let elapsed_seconds = Date.now() - start
           if elapsed_seconds > max_wait_time:
             resolve(false)
             return
@@ -401,6 +382,27 @@ when isMainModule:
 
       return p
 
+    proc createTags(tags: seq[cstring]): Future[void] {.async.} =
+      for tag in tags:
+        let details = newCreateDetails(title = tag, `type` = "folder",
+            parentId = tags_folder_id)
+        let tag = await browser.bookmarks.create(details)
+
+    proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
+      var r: seq[cstring] = @[]
+      for tag in tags:
+        let id_index = find[seq[cstring], cstring](test_machine.data.tag_ids, tag.id)
+        if id_index == -1:
+          r.add(tag.title)
+        elif tag.dateGroupModified != test_machine.data.tag_timestamps[id_index]:
+          r.add(tag.title)
+
+      return r
+
+    proc getAddedTagsAsync(): Future[seq[cstring]] {.async.} =
+      let tags = await browser.bookmarks.getChildren(tags_folder_id)
+      return getAddedTags(tags)
+
     var created_bk_ids = newSeq[cstring]()
     proc testAddBookMark() {.async.} =
       let p = browser.runtime.connectNative("sqlite_update")
@@ -408,27 +410,25 @@ when isMainModule:
       let msg = await sendPortMessage(p, "tag_inc|pocket,video,discard_tag")
       check msg != nil, "Can't connnect to sqlite_update native application"
 
-      g_status.config.discard_tags.add(@[@["discard_tag".cstring], @[
-          "pocket".cstring]])
+      test_machine.data.config.discard_tags.add(@[@["discard_tag".cstring], @["pocket".cstring]])
 
       # tags that are part of bookmark
       let added_tags = await getAddedTagsAsync()
       check added_tags.len == 3, "Wrong count of added tags"
 
       # Add bookmark and pocket link
-      let detail = newCreateDetails(title = "Google",
-          url = url_to_add)
+      let detail = newCreateDetails(title = "Google", url = url_to_add)
       let bk1 = await browser.bookmarks.create(detail)
       created_bk_ids.add(bk1.id)
 
-      let link_added = await waitForPocketLink()
-      check link_added, "Could not get added pocket link. Either test timed out because adding link was taking too long or adding link failed on pocket side."
-      let pocket_status = cast[int](pocket_link.g_status)
-      check pocket_status == 1, "pocket_link g_status failed"
+      let is_pocket_link = await waitForPocketLink()
+      check is_pocket_link, "Adding Pocket link failed or took too long"
+      let pocket_link = test_machine.test_data["pocket"]
+      let pocket_status = cast[int](pocket_link.status)
+      check pocket_status == 1, "Added pocket link request returned failed status"
 
       # Check that link was added to pocket
-      let links_result = await retrieveLinks(g_status.config.access_token,
-          url_to_add)
+      let links_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
       check links_result.isOk()
       let links = links_result.value()
       let link_key = cast[cstring](pocket_link.item.item_id)
@@ -445,10 +445,10 @@ when isMainModule:
       var action = newJsObject()
       action["action"] = "delete".cstring
       action["item_id"] = link_key
-      let del_result = await modifyLink(g_status.config.access_token, action)
+      let del_result = await modifyLink(test_machine.data.config.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
-      let del_status = cast[int](del_value.g_status)
+      let del_status = cast[int](del_value.status)
       check del_status == 1
       let del_results = cast[seq[bool]](del_value.action_results)
       check del_results[0]
@@ -460,8 +460,7 @@ when isMainModule:
       created_bk_ids.add(bk2.id)
 
       # Make sure pocket link was deleted
-      let links_empty_result = await retrieveLinks(
-          g_status.config.access_token, url_to_add)
+      let links_empty_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
       check links_empty_result.isOk()
       let links_empty = links_empty_result.value()
       let list_empty = cast[seq[JsObject]](links_empty.list)
@@ -484,50 +483,48 @@ when isMainModule:
 
 
     proc runTestsImpl() {.async.} =
-      console.info "Run tests"
+      console.info "TEST: Run"
       suite "background":
         block filter_tags:
           testFilterTags()
 
         block pocket_access_token:
-          skip()
-          check g_status.config.access_token.len > 0, "'access_token' was not found in extension local storage"
+          check test_machine.data.config.access_token.len > 0, "'access_token' was not found in extension's local storage"
 
         block add_bookmark:
-          skip()
+          # skip()
           await testAddBookMark()
 
 
     proc setup() {.async.} =
       await browser.storage.local.clear()
-      console.info "Tests setup"
-      g_status = newStateData(
+      console.info "TEST: Setup"
+      let state_data = newStateData(
         config = newConfig(
           add_tags = @[@["pocket".cstring], @[
               "second".cstring, "third".cstring]]))
       const json_str = staticRead("../tmp/localstorage.json")
       let local_value = cast[JsObject](JSON.parse(json_str))
-      g_status.config.access_token = cast[cstring](local_value.access_token)
-      g_status.config.username = cast[cstring](local_value.username)
-      discard await browser.storage.local.set(cast[JsObject](g_status.config))
+      discard await browser.storage.local.set(cast[JsObject](state_data.config))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
-      let tabs_opts = TabCreateProps(active: false, url: browser.runtime.getURL("options/options.html"))
-      discard browser.tabs.create(tabs_opts)
+      test_machine = createBackgroundMachine(state_data)
+      discard await asyncUpdateTagDates(test_machine.data)
+      test_machine.transition(Login, local_value)
+      # let tabs_opts = TabCreateProps(active: false, url: browser.runtime.getURL("options/options.html"))
+      # discard browser.tabs.create(tabs_opts)
 
     proc cleanup() {.async.} =
-      console.info "Tests cleanup"
-      for id in g_status.tag_ids:
+      console.info "TEST: Cleanup"
+      for id in test_machine.data.tag_ids:
         await browser.bookmarks.remove(id)
       for id in created_bk_ids:
         await browser.bookmarks.remove(id)
 
     proc runTestSuite() {.async, discardable.} =
-      console.info "Start test suite"
+      console.info "TEST: Start"
       await setup()
       await initBackground()
-      # document.addEventListener("DOMContentLoaded", proc(
-      #     _: Event) = console.log "content loaded"; discard initBackground())
       try:
         await runTestsImpl()
       finally:
