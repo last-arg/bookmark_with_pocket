@@ -242,9 +242,6 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
 func createBackgroundMachine(data: StateData): Machine =
   var machine = newMachine(data = data)
 
-  # TODO?: depending on state change bookmarks onCreate callback function
-  # LoggedIn -> onCreateBookmarkEvent
-  # Other states -> asyncUpdateTagDates
   proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
   proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) {.closure.} =
     discard onCreateBookmark(machine, bookmark)
@@ -272,6 +269,7 @@ func createBackgroundMachine(data: StateData): Machine =
 
   proc clickPocketLoginEvent(tab: Tab) = discard badgePocketLogin(machine, tab.id)
 
+  proc onCreateUpdateTags(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc initLoggedOut() =
     const empty_string = "".cstring
     let login_info = newJsObject()
@@ -284,9 +282,11 @@ func createBackgroundMachine(data: StateData): Machine =
     machine.data.config.access_token = empty_string
     setBadgeNotLoggedIn()
     browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
+    browser.bookmarks.onCreated.addListener(onCreateUpdateTags)
 
   proc deinitLoggedOut() =
     browser.browserAction.onClicked.removeListener(clickPocketLoginEvent)
+    browser.bookmarks.onCreated.removeListener(onCreateUpdateTags)
 
   machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc(param: JsObject) =
     console.log "STATE: InitialLoad -> LoggedIn"
