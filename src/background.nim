@@ -239,7 +239,7 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
     when defined(testing):
       out_machine.test_data["pocket"] = link_result.unsafeGet()
 
-func createBackgroundMachine(data: StateData): Machine =
+func newBackgroundMachine(data: StateData): Machine =
   var machine = newMachine(data = data)
 
   proc onOpenOptionPageEvent(_: Tab) = discard browser.runtime.openOptionsPage()
@@ -309,19 +309,8 @@ func createBackgroundMachine(data: StateData): Machine =
 
   return machine
 
-proc initBackground*() {.async.} =
-  let storage = await browser.storage.local.get()
-  let state_data: StateData = newStateData(config = cast[Config](storage))
-  let machine = createBackgroundMachine(state_data)
+proc initBackgroundEvents(machine: Machine) =
   discard asyncUpdateTagDates(machine.data)
-
-  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
-  # let is_logged_in = true
-  if is_logged_in:
-    machine.transition(Login, storage)
-  else:
-    machine.transition(Logout)
-
   proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc onMessageCommand(msg: JsObject) =
     let cmd = cast[cstring](msg.cmd)
@@ -338,6 +327,21 @@ proc initBackground*() {.async.} =
   browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
   browser.runtime.onMessage.addListener(onMessageCommand)
+
+proc initBackground*() {.async.} =
+  let storage = await browser.storage.local.get()
+  let state_data: StateData = newStateData(config = cast[Config](storage))
+  let machine = newBackgroundMachine(state_data)
+
+  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  # let is_logged_in = true
+  if is_logged_in:
+    machine.transition(Login, storage)
+  else:
+    machine.transition(Logout)
+
+  initBackgroundEvents(machine)
+
 
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   if details.reason == "install":
@@ -507,8 +511,8 @@ when isMainModule:
       discard await browser.storage.local.set(cast[JsObject](state_data.config))
       await createTags(@["pocket".cstring, "book", "hello", "video",
           "discard_tag"])
-      test_machine = createBackgroundMachine(state_data)
-      discard await asyncUpdateTagDates(test_machine.data)
+      test_machine = newBackgroundMachine(state_data)
+      initBackgroundEvents(test_machine)
       test_machine.transition(Login, local_value)
       # let tabs_opts = TabCreateProps(active: false, url: browser.runtime.getURL("options/options.html"))
       # discard browser.tabs.create(tabs_opts)
