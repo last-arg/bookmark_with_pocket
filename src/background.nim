@@ -524,7 +524,6 @@ when isMainModule:
     proc runTestSuite() {.async, discardable.} =
       console.info "TEST: Start"
       await setup()
-      await initBackground()
       try:
         await runTestsImpl()
       finally:
