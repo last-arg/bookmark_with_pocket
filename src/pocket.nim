@@ -9,7 +9,7 @@ const pocket_add_folder* = "pocket"
 let consumer_key*: cstring = "88239-c5239ac90c414b6515d526f4"
 # const redirect_uri: cstring = "https://localhost"
 let redirect_uri: cstring = getRedirectURL() & "oauth"
-let pocket_auth_uri: cstring = "https://getpocket.com/auth/authorize?request_token=$REQUEST_TOKEN&redirect_uri=" & $redirect_uri
+let pocket_auth_uri: cstring = "https://getpocket.com/auth/authorize?request_token=$REQUEST_TOKEN&redirect_uri=" & redirect_uri
 
 type
   FetchOptions* = ref object of JsRoot
@@ -163,7 +163,7 @@ proc addLink*(url: cstring, access_token: cstring, tags: seq[cstring]): Future[
 
   # TODO: handle other status codes
   if resp.status != 200:
-    console.log("Unhandled status code: " & $resp.status)
+    console.log("Unhandled status code: " & cstring($resp.status))
     return err(PocketResult[JsObject], InvalidStatusCode)
 
   let resp_json = await resp.json()
@@ -188,7 +188,7 @@ proc retrieveLinks*(access_token: cstring, search_term: cstring): Future[
 
   # TODO: handle other status codes
   if resp.status != 200:
-    console.log("Unhandled status code: " & $resp.status)
+    console.log("Unhandled status code: " & cstring($resp.status))
     return err(PocketResult[JsObject], InvalidStatusCode)
 
   let resp_json = await resp.json()
@@ -210,7 +210,7 @@ proc modifyLink*(access_token: cstring, action: JsObject): Future[PocketResult[
 
   # TODO: handle other status codes
   if resp.status != 200:
-    console.log("Unhandled status code: " & $resp.status)
+    console.log("Unhandled status code: " & cstring($resp.status))
     return err(PocketResult[JsObject], InvalidStatusCode)
 
   let resp_json = await resp.json()

@@ -50,8 +50,8 @@ proc transition*(m: Machine, event: Event, param: JsObject = nil) =
       t.cb.unsafeGet()(param)
     m.currentState = t.next
   else:
-    console.error "Transition is not defined: State(" & $m.currentState &
-        ") Event(" & $event & "). Staying in current state: " & $m.currentState
+    console.error "Transition is not defined: State(" & cstring($m.currentState) &
+        ") Event(" & cstring($event) & "). Staying in current state: " & cstring($m.currentState)
 
 let badge_empty = newJsObject()
 badge_empty["path"] = "./assets/badge_empty.svg".cstring
@@ -231,7 +231,7 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
     let link_result = await addLink(bookmark.url, out_data.config.access_token, filtered_tags)
     if link_result.isErr():
       console.error "Failed to add bookmark to Pocket. Error type: " &
-          $link_result.error()
+          cstring($link_result.error())
       setBadgeFailed(tab_id)
       return
 
