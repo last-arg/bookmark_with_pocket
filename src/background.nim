@@ -1,7 +1,7 @@
 import dom, jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
-import results, options, tables
+import badresults, options, tables
 
 type
   StateCb* = proc(param: JsObject): void

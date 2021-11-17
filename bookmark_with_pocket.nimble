@@ -13,6 +13,6 @@ bin = @["bookmark_with_pocket"]
 
 # Dependencies
 
-requires "nim >= 1.4.6"
-requires "result"
+requires "nim >= 1.6.0"
+requires "https://github.com/disruptek/badresults >= 2.1.0"
 requires "https://github.com/disruptek/balls >= 3.0.0"

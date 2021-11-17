@@ -1,6 +1,6 @@
 import asyncjs, jsffi, dom, jscore
 import jsconsole
-import results
+import badresults
 import app_js_ffi
 
 proc getRedirectURL*(): cstring {.importcpp: "browser.identity.getRedirectURL()".}

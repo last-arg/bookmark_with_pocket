@@ -1,5 +1,5 @@
 import jsffi, dom, asyncjs, jsconsole
-import results
+import badresults
 import pocket
 
 # TODO: remove code or whole file?
