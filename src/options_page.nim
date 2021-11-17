@@ -1,6 +1,6 @@
 import jsconsole, asyncjs, dom, jsffi
 import web_ext_browser, app_config, app_js_ffi, pocket
-import result
+import badresults
 
 type
   FormData* = ref FormDataObj
