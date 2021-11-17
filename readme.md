@@ -12,4 +12,18 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
 
 ## Resources
-  - [Pocket authentication](https://blog.wilgucki.pl/oauth-authentication-without-browser/)
+- [Pocket authentication](https://blog.wilgucki.pl/oauth-authentication-without-browser/)
+
+
+## TODO
+- Explore handling of option/result values. [Optional value handling in Nim](https://peterme.net/optional-value-handling-in-nim.html)
+  - https://github.com/arnetheduck/nim-result
+  - https://github.com/superfunc/maybe
+  - https://github.com/PMunch/nim-optionsutils
+  - https://github.com/disruptek/badresults
+  - https://github.com/superfunc/maybe
+  - fusion/matching
+- replace tailwindcss with unocss
+- Use nim std lib js fetch api (requires nim >= 1.6)
+- style options page
+
