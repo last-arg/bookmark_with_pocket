@@ -4,8 +4,8 @@ import app_js_ffi
 
 type
   PocketError* {.pure.} = enum
-    FailedWebAuthFlow, InvalidResponseBody
-    InvalidStatusCode
+    FailedWebAuthFlow, InvalidStatusCode, UserRejectedCode
+    StatusForbidden, InvalidAccessToken, InvalidRequestToken
 
   PocketResult*[T] = Result[T, PocketError]
 
@@ -35,24 +35,26 @@ func createPocketRequest*(url: cstring; body: cstring): Request =
   return newRequest(url, req_init)
 
 
-proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
-  let req_body: cstring = "consumer_key=" & consumer_key & "&redirect_uri=" & redirect_uri
+type TokenResponse = ref object
+  code: cstring
 
-  let req = createPocketRequest("https://getpocket.com/v3/oauth/request", req_body)
+proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
+  let body_json = newJsObject()
+  body_json["consumer_key"] = consumer_key
+  body_json["redirect_uri"] = redirect_uri
+
+  let req = createPocketRequest("https://getpocket.com/v3/oauth/request", JSON.stringify(body_json))
   let resp = await fetch(req)
 
-  if resp.status != 200:
-    console.error "Failed to get Pocket request token"
-    return err(PocketResult[cstring], FailedWebAuthFlow)
-
-  let resp_body = await resp.text()
-
-  let kv = resp_body.split "="
-  if kv.len < 2:
-    console.error "Invalid Pocket API response body for new request token"
-    return err(PocketResult[cstring], InvalidResponseBody)
-
-  return ok(PocketResult[cstring], kv[1])
+  return case resp.status:
+    of 200:
+      let body = cast[TokenResponse](await resp.json())
+      if isUndefined(body.code) or isNull(body.code) or body.code.len == 0:
+        err(PocketResult[cstring], InvalidRequestToken)
+      else:
+        ok(PocketResult[cstring], body.code)
+    else:
+      err(PocketResult[cstring], FailedWebAuthFlow)
 
 
 proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.async.} =
@@ -67,18 +69,32 @@ proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.asy
   return ok(PocketResult[void])
 
 
-proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.async.} =
-  let req_body: cstring = "consumer_key=" & consumer_key & "&code=" & request_token
+type AccessTokenResponse = ref object
+  access_token: cstring
+  username: cstring
 
-  let req = createPocketRequest("https://getpocket.com/v3/oauth/authorize", req_body)
+proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.async.} =
+  let body_json = newJsObject()
+  body_json["consumer_key"] = consumer_key
+  body_json["code"] = request_token
+
+  let req = createPocketRequest("https://getpocket.com/v3/oauth/authorize", JSON.stringify(body_json))
   let resp = await fetch(req)
 
-  if resp.status != 200:
-    console.error "Failed to get Pocket access token"
-    return err(PocketResult[cstring], InvalidStatusCode)
-
-  let resp_body = await resp.text()
-  return ok(PocketResult[cstring], resp_body)
+  return case resp.status:
+    of 200:
+      let body = cast[AccessTokenResponse](await resp.json())
+      if isUndefined(body.access_token) or isNull(body.access_token) or body.access_token.len == 0:
+        err(PocketResult[cstring], InvalidAccessToken)
+      else:
+        ok(PocketResult[cstring], body.access_token)
+    of 403:
+      if resp.headers["X-Error"] == "User rejected code.":
+        err(PocketResult[cstring], UserRejectedCode)
+      else:
+        err(PocketResult[cstring], StatusForbidden)
+    else:
+      err(PocketResult[cstring], InvalidStatusCode)
 
 proc authenticate*(): Future[PocketResult[cstring]] {.async.} =
   let token_result = await getRequestToken()
