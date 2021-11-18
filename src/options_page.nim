@@ -22,8 +22,8 @@ proc optionTagToSeq(s: cstring): seq[seq[cstring]] =
   return s.split("\n")
     .map(proc(it: cstring): seq[cstring] =
       it.split(",")
-        .map(proc(val: cstring): cstring = val.trim())
-        .filter(proc(val: cstring): bool = val.len > 0))
+      .map(proc(val: cstring): cstring = val.trim())
+      .filter(proc(val: cstring): bool = val.len > 0))
     .filter(proc(row: seq[cstring]): bool = row.len > 0)
 
 import macros, os

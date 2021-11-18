@@ -1,5 +1,5 @@
-import asyncjs, jsffi, dom, jscore
-import jsconsole
+import std/[asyncjs, jsffi, dom, jscore]
+import std/jsconsole
 import badresults
 import app_js_ffi
 
