@@ -1,4 +1,4 @@
-import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders, strformat]
+import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders]
 import std/jsconsole
 import badresults
 import app_js_ffi
@@ -12,7 +12,7 @@ let redirect_uri: cstring = getRedirectURL() & "oauth"
 let pocket_auth_uri: cstring = "https://getpocket.com/auth/authorize?request_token=$REQUEST_TOKEN&redirect_uri=" & redirect_uri
 
 type
-  PocketError* = enum
+  PocketError* {.pure.} = enum
     WebAuthFlow, InvalidResponseBody
     InvalidStatusCode
 
@@ -110,7 +110,6 @@ proc authenticate*(): Future[PocketResult[cstring]] {.async.} =
 
 proc addLink*(url: cstring, access_token: cstring, tags: seq[cstring]): Future[
     PocketResult[JsObject]] {.async.} =
-  let headers = contentTypeHeaderValues(ContentType.AppJson)
   var params = newJsObject()
   params["url"] = url
   params["consumer_key"] = consumer_key
@@ -139,7 +138,6 @@ proc addLink*(url: cstring, access_token: cstring, tags: seq[cstring]): Future[
 # NOTE: At the moment is only used when testing code
 proc retrieveLinks*(access_token: cstring, search_term: cstring): Future[
     PocketResult[JsObject]] {.async.} =
-  let headers = contentTypeHeaderValues(ContentType.AppJson)
   var params = newJsObject()
   params["consumer_key"] = consumer_key
   params["access_token"] = access_token
@@ -163,7 +161,6 @@ proc retrieveLinks*(access_token: cstring, search_term: cstring): Future[
 
 proc modifyLink*(access_token: cstring, action: JsObject): Future[PocketResult[
     JsObject]] {.async.} =
-  let headers = contentTypeHeaderValues(ContentType.AppJson)
 
   let params = newJsObject()
   params["consumer_key"] = consumer_key
