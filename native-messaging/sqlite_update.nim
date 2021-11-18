@@ -14,7 +14,7 @@ import json
 
 proc main() =
   var msg = "failed"
-  var profiles_dir = ""
+  var profiles_dir = "/tmp"
   var sqlite_file = ""
 
   for key, val in envPairs():
@@ -28,11 +28,13 @@ proc main() =
     sqlite_file = file
     break
 
-  if profiles_dir.len == 0 and sqlite_file.len == 0:
+  if sqlite_file.len == 0:
+    echo "Didn't find places.sqlite file"
     quit()
 
   var s_in = newFileStream(stdin)
   let db = open(sqlite_file, "", "", "")
+
   while true:
     let l = cast[int](s_in.readUint32())
     let content = unescape(s_in.readStr(l))

@@ -1,4 +1,4 @@
-import std/[asyncjs, jsffi, dom, jscore]
+import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders, strformat]
 import std/jsconsole
 import badresults
 import app_js_ffi
@@ -12,31 +12,6 @@ let redirect_uri: cstring = getRedirectURL() & "oauth"
 let pocket_auth_uri: cstring = "https://getpocket.com/auth/authorize?request_token=$REQUEST_TOKEN&redirect_uri=" & redirect_uri
 
 type
-  FetchOptions* = ref object of JsRoot
-    keepalive*: bool
-    metod* {.importcpp: "method".}: cstring
-    body*, integrity*, referrer*, mode*, credentials*, cache*, redirect*,
-        referrerPolicy*: cstring
-
-  Body* = ref object of JsRoot ## https://developer.mozilla.org/en-US/docs/Web/API/Body
-    bodyUsed*: bool
-
-  Response* = ref object of JsRoot ## https://developer.mozilla.org/en-US/docs/Web/API/Response
-    bodyUsed*, ok*, redirected*: bool
-    typ* {.importcpp: "type".}: cstring
-    url*, statusText*: cstring
-    status*: cint
-    headers*: JsObject
-    body*: Body
-
-  Request* = ref object of JsRoot ## https://developer.mozilla.org/en-US/docs/Web/API/Request
-    bodyUsed*, ok*, redirected*: bool
-    typ* {.importcpp: "type".}: cstring
-    url*, statusText*: cstring
-    status*: cint
-    headers*: JsObject
-    body*: Body
-
   PocketError* = enum
     WebAuthFlow, InvalidResponseBody
     InvalidStatusCode
@@ -47,37 +22,26 @@ type
     AppUrlEncoded = "application/x-www-form-urlencoded",
     AppJson = "application/json"
 
+func newRequest*(url: cstring, opts: JsObject): Request {.importjs: "(new Request(#, #))".}
 proc replace*(str: cstring, target: cstring, replace: cstring): cstring {.importcpp.}
 proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
     importcpp: "browser.identity.launchWebAuthFlow(#)".}
 
-proc fetch*(url: Request): Future[Response] {.
-    importcpp: "fetch(#)".}
-proc fetch*(url: cstring): Future[Response] {.
-    importcpp: "fetch(#)".}
 
-proc json*(self: Response): Future[JsObject] {.importjs: "#.$1()".}
-
-func newRequest*(url: cstring; opts: JsObject = newJsObject()): Request {.
-    importcpp: "(new Request(#, #))".}
-
-proc text*(self: Response): Future[cstring] {.importcpp: "#.$1()".}
-
-func contentTypeHeaderValues(content_type: ContentType): JsObject =
-  let type_str = ($content_type).cstring
-  var headers = newJsObject()
-  headers["Content-Type"] = type_str & "; charset=UTF-8".cstring
-  headers["X-Accept"] = type_str
+func contentTypeHeaderValues(content_type: ContentType): Headers =
+  let type_str = cstring($content_type)
+  let headers = newHeaders()
+  headers.add("Content-Type", type_str & "; charset=UTF-8".cstring)
+  headers.add("X-Accept", type_str)
   return headers
 
-func createPocketRequest*(url: cstring; body: cstring,
-    content_type = AppJson): Request =
-  let headers = contentTypeHeaderValues(content_type)
-  var req_opts = newJsObject()
-  req_opts["method"] = "POST".cstring
-  req_opts.headers = headers
-  req_opts.body = body
-  return newRequest(url, req_opts)
+
+func createPocketRequest*(url: cstring; body: cstring, content_type = AppJson): Request =
+  let req_init = newJsObject()
+  req_init["method"] = "POST".cstring
+  req_init.headers = contentTypeHeaderValues(content_type)
+  req_init.body = body
+  return newRequest(url, req_init)
 
 
 proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
@@ -101,9 +65,11 @@ proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
 
   return ok(PocketResult[cstring], kv[1])
 
+
 proc authUrl*(request_token: cstring): cstring =
   let url = replace(pocket_auth_uri, "$REQUEST_TOKEN".cstring, request_token)
   return url
+
 
 proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.async.} =
   let url = authUrl(request_token)

@@ -354,14 +354,14 @@ browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
 
 when isMainModule:
   when defined(release):
-    console.log "BACKGROUND RELEASE BUILD"
-    let machine = create
+    console.log "background.js RELEASE BUILD"
+    # let machine = create
     discard initBackground()
 
   when defined(testing):
     import balls, jscore
 
-    console.log "BACKGROUND TESTING(DEBUG) BUILD"
+    console.log "background.js TESTING(DEBUG) BUILD"
     var test_machine: Machine = nil
 
     proc waitForPocketLink(): Future[bool] =
