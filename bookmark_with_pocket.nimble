@@ -7,12 +7,13 @@ license = "MIT"
 srcDir = "src"
 binDir = "dist"
 bin = @["bookmark_with_pocket"]
-# skipDirs = @["balls"]
+skipDirs = @["balls"]
 
 # backend = "js"
 
 # Dependencies
 
 requires "nim >= 1.6.0"
+requires "fusion#head"
 requires "https://github.com/disruptek/badresults >= 2.1.0"
 requires "https://github.com/disruptek/balls >= 3.0.0"

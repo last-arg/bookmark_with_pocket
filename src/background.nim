@@ -2,6 +2,9 @@ import dom, jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import badresults, options, tables
+# TODO: use case matching
+# import fusion/matching
+# {.experimental: "caseStmtMacros".}
 
 type
   StateCb* = proc(param: JsObject): void

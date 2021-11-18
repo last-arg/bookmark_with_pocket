@@ -1,9 +1,20 @@
-import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders]
-import std/jsconsole
+import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders, jsconsole]
 import badresults
 import app_js_ffi
 
-proc getRedirectURL*(): cstring {.importcpp: "browser.identity.getRedirectURL()".}
+type
+  PocketError* {.pure.} = enum
+    FailedWebAuthFlow, InvalidResponseBody
+    InvalidStatusCode
+
+  PocketResult*[T] = Result[T, PocketError]
+
+func newRequest*(url: cstring, opts: JsObject): Request {.importjs: "(new Request(#, #))".}
+proc replace*(str: cstring, target: cstring, replace: cstring): cstring {.importcpp.}
+proc getRedirectURL*(): cstring {.importjs: "browser.identity.getRedirectURL()".}
+proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
+    importjs: "browser.identity.launchWebAuthFlow(#)".}
+
 
 const pocket_add_folder* = "pocket"
 const content_type = "application/json"
@@ -11,18 +22,6 @@ let consumer_key*: cstring = "88239-c5239ac90c414b6515d526f4"
 # const redirect_uri: cstring = "https://localhost"
 let redirect_uri: cstring = getRedirectURL() & "oauth"
 let pocket_auth_uri: cstring = "https://getpocket.com/auth/authorize?request_token=$REQUEST_TOKEN&redirect_uri=" & redirect_uri
-
-type
-  PocketError* {.pure.} = enum
-    WebAuthFlow, InvalidResponseBody
-    InvalidStatusCode
-
-  PocketResult*[T] = Result[T, PocketError]
-
-func newRequest*(url: cstring, opts: JsObject): Request {.importjs: "(new Request(#, #))".}
-proc replace*(str: cstring, target: cstring, replace: cstring): cstring {.importcpp.}
-proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
-    importcpp: "browser.identity.launchWebAuthFlow(#)".}
 
 
 func createPocketRequest*(url: cstring; body: cstring): Request =
@@ -37,15 +36,14 @@ func createPocketRequest*(url: cstring; body: cstring): Request =
 
 
 proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
-  let req_body: cstring = "consumer_key=" & consumer_key & "&redirect_uri=" &
-      redirect_uri
+  let req_body: cstring = "consumer_key=" & consumer_key & "&redirect_uri=" & redirect_uri
 
   let req = createPocketRequest("https://getpocket.com/v3/oauth/request", req_body)
   let resp = await fetch(req)
 
   if resp.status != 200:
     console.error "Failed to get Pocket request token"
-    return err(PocketResult[cstring], WebAuthFlow)
+    return err(PocketResult[cstring], FailedWebAuthFlow)
 
   let resp_body = await resp.text()
 
@@ -57,20 +55,15 @@ proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
   return ok(PocketResult[cstring], kv[1])
 
 
-proc authUrl*(request_token: cstring): cstring =
-  let url = replace(pocket_auth_uri, "$REQUEST_TOKEN".cstring, request_token)
-  return url
-
-
 proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.async.} =
-  let url = authUrl(request_token)
+  let url = replace(pocket_auth_uri, "$REQUEST_TOKEN".cstring, request_token)
   let options = newJsObject()
   options["url"] = url
   options["interactive"] = true
   try:
     discard await launchWebAuthFlow(options)
   except:
-    return err(PocketResult[void], WebAuthFlow)
+    return err(PocketResult[void], FailedWebAuthFlow)
   return ok(PocketResult[void])
 
 
