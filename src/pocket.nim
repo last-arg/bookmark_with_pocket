@@ -6,6 +6,7 @@ import app_js_ffi
 proc getRedirectURL*(): cstring {.importcpp: "browser.identity.getRedirectURL()".}
 
 const pocket_add_folder* = "pocket"
+const content_type = "application/json"
 let consumer_key*: cstring = "88239-c5239ac90c414b6515d526f4"
 # const redirect_uri: cstring = "https://localhost"
 let redirect_uri: cstring = getRedirectURL() & "oauth"
@@ -18,28 +19,19 @@ type
 
   PocketResult*[T] = Result[T, PocketError]
 
-  ContentType* = enum
-    AppUrlEncoded = "application/x-www-form-urlencoded",
-    AppJson = "application/json"
-
 func newRequest*(url: cstring, opts: JsObject): Request {.importjs: "(new Request(#, #))".}
 proc replace*(str: cstring, target: cstring, replace: cstring): cstring {.importcpp.}
 proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
     importcpp: "browser.identity.launchWebAuthFlow(#)".}
 
 
-func contentTypeHeaderValues(content_type: ContentType): Headers =
-  let type_str = cstring($content_type)
+func createPocketRequest*(url: cstring; body: cstring): Request =
   let headers = newHeaders()
-  headers.add("Content-Type", type_str & "; charset=UTF-8".cstring)
-  headers.add("X-Accept", type_str)
-  return headers
-
-
-func createPocketRequest*(url: cstring; body: cstring, content_type = AppJson): Request =
+  headers.add("Content-Type", content_type & "; charset=UTF-8".cstring)
+  headers.add("X-Accept", content_type)
   let req_init = newJsObject()
   req_init["method"] = "POST".cstring
-  req_init.headers = contentTypeHeaderValues(content_type)
+  req_init.headers = headers
   req_init.body = body
   return newRequest(url, req_init)
 
@@ -48,8 +40,7 @@ proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
   let req_body: cstring = "consumer_key=" & consumer_key & "&redirect_uri=" &
       redirect_uri
 
-  let req = createPocketRequest("https://getpocket.com/v3/oauth/request",
-      req_body, ContentType.AppUrlEncoded)
+  let req = createPocketRequest("https://getpocket.com/v3/oauth/request", req_body)
   let resp = await fetch(req)
 
   if resp.status != 200:
@@ -84,11 +75,9 @@ proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.asy
 
 
 proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.async.} =
-  let req_body: cstring = "consumer_key=" & consumer_key & "&code=" &
-      request_token
+  let req_body: cstring = "consumer_key=" & consumer_key & "&code=" & request_token
 
-  let req = createPocketRequest("https://getpocket.com/v3/oauth/authorize",
-      req_body, ContentType.AppUrlEncoded)
+  let req = createPocketRequest("https://getpocket.com/v3/oauth/authorize", req_body)
   let resp = await fetch(req)
 
   if resp.status != 200:
@@ -138,7 +127,7 @@ proc addLink*(url: cstring, access_token: cstring, tags: seq[cstring]): Future[
 # NOTE: At the moment is only used when testing code
 proc retrieveLinks*(access_token: cstring, search_term: cstring): Future[
     PocketResult[JsObject]] {.async.} =
-  var params = newJsObject()
+  let params = newJsObject()
   params["consumer_key"] = consumer_key
   params["access_token"] = access_token
   params["search"] = search_term
