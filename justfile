@@ -1,5 +1,8 @@
 build-css:
-  npx postcss src/css/main.css -o dist/main.css --watch
+  npx unocss options/options.html src/options_page.nim -o dist/main.css
+
+watch-css:
+  npx unocss options/options.html src/options_page.nim -o dist/main.css --watch
 
 build file='background' d='debug':
   nim js -d:{{d}} src/{{file}}.nim

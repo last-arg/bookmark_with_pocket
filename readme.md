@@ -25,7 +25,5 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/disruptek/badresults
   - https://github.com/superfunc/maybe
   - fusion/matching
-- replace tailwindcss with unocss
-- Use nim std lib js fetch api (requires nim >= 1.6)
 - style options page
 

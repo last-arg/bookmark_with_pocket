@@ -17,7 +17,6 @@ proc getRedirectURL*(): cstring {.importjs: "browser.identity.getRedirectURL()".
 proc launchWebAuthFlow*(options: JsObject): Future[Response] {.
     importjs: "browser.identity.launchWebAuthFlow(#)".}
 
-
 const pocket_add_folder* = "pocket"
 const content_type = "application/json"
 let consumer_key*: cstring = "88239-c5239ac90c414b6515d526f4"
