@@ -16,7 +16,9 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
 
 ## TODO
-- Explore handling of option/result values. [Optional value handling in Nim](https://peterme.net/optional-value-handling-in-nim.html)
+- Explore handling of option/result values.
+  - [Optional value handling in Nim](https://peterme.net/optional-value-handling-in-nim.html)
+  - [Pattern matching in Nim ](https://nim-lang.org/blog/2021/03/10/fusion-and-pattern-matching.html)
   - https://github.com/arnetheduck/nim-result
   - https://github.com/superfunc/maybe
   - https://github.com/PMunch/nim-optionsutils

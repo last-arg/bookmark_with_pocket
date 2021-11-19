@@ -498,8 +498,6 @@ when isMainModule:
           check test_machine.data.config.access_token.len > 0, "'access_token' was not found in extension's local storage"
 
         block add_bookmark:
-          let c = await authenticate()
-          console.log(c)
           skip()
           await testAddBookMark()
 

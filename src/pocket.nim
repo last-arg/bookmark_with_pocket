@@ -1,11 +1,13 @@
 import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders, jsconsole]
 import badresults
 import app_js_ffi
+# import fusion/matching
+# {.experimental: "caseStmtMacros".}
 
 type
   PocketError* {.pure.} = enum
-    FailedWebAuthFlow, InvalidStatusCode, UserRejectedCode
-    StatusForbidden, InvalidAccessToken, InvalidRequestToken
+    FailedWebAuthFlow, InvalidStatusCode, UserRejectedCode,
+    StatusForbidden, InvalidAccessToken, InvalidRequestToken,
 
   PocketResult*[T] = Result[T, PocketError]
 
@@ -54,6 +56,7 @@ proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
       else:
         ok(PocketResult[cstring], body.code)
     else:
+      console.log("Unhandled status code: " & cstring($resp.status))
       err(PocketResult[cstring], FailedWebAuthFlow)
 
 
@@ -94,11 +97,14 @@ proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.as
       else:
         err(PocketResult[cstring], StatusForbidden)
     else:
+      console.log("Unhandled status code: " & cstring($resp.status))
       err(PocketResult[cstring], InvalidStatusCode)
+
 
 proc authenticate*(): Future[PocketResult[cstring]] {.async.} =
   let token_result = await getRequestToken()
-  if token_result.isErr(): return err(PocketResult[cstring], token_result.error())
+
+  if token_result.isErr(): return token_result
   let code = token_result.value
 
   let auth_result = await oauthAutheticate(code)
