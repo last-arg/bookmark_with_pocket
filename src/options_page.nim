@@ -1,17 +1,12 @@
-import jsconsole, asyncjs, dom, jsffi
+import jsconsole, asyncjs, dom, jsffi, std/jsformdata
 import web_ext_browser, app_config, app_js_ffi, pocket
 import badresults
 
-type
-  FormData* = ref FormDataObj
-  FormDataObj {.importc.} = object of RootObj
-
-  # NOTE: can also be File (https://developer.mozilla.org/en-US/docs/Web/API/File)
-  FormDataEntryValue = cstring
-
+# NOTE: std/jsformdata doesn't have version with FormElement
 proc newFormData(elem: FormElement): FormData {.importcpp: "new FormData(@)".}
 # Can return null if key doesn't exist
-proc get(fd: FormData, key: cstring): FormDataEntryValue {.importcpp.}
+# Use std/jsformdata function `[]`
+proc get(self: FormData; name: cstring): cstring = self[name]
 
 proc tagOptionsToString(tags: seq[seq[cstring]]): cstring =
   return tags.map(
@@ -27,7 +22,7 @@ proc optionTagToSeq(s: cstring): seq[seq[cstring]] =
     .filter(proc(row: seq[cstring]): bool = row.len > 0)
 
 import macros, os
-const form_fields: tuple[bools: seq[cstring], tags: seq[cstring]] = block:
+const form_fields: tuple[bools: seq[cstring]; tags: seq[cstring]] = block:
   var bools: seq[cstring] = @[]
   var tags: seq[cstring] = @[]
   # echo "Type declartaion is: ", Config.getTypeImpl[0].getTypeImpl.treerepr
