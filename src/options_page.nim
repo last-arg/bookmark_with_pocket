@@ -2,10 +2,11 @@ import jsconsole, asyncjs, dom, jsffi, std/jsformdata
 import web_ext_browser, app_config, app_js_ffi, pocket
 import badresults
 
+console.log("test")
 # NOTE: std/jsformdata doesn't have version with FormElement
 proc newFormData(elem: FormElement): FormData {.importcpp: "new FormData(@)".}
-# Can return null if key doesn't exist
 # Use std/jsformdata function `[]`
+# Can return null if key doesn't exist
 proc get(self: FormData; name: cstring): cstring = self[name]
 
 proc tagOptionsToString(tags: seq[seq[cstring]]): cstring =
@@ -155,3 +156,6 @@ proc init() {.async.} =
 
 when isMainModule:
   document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
+  when defined(testing) or defined(debug):
+    document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
+

@@ -7,6 +7,8 @@
     "test": "tests"
   },
   "devDependencies": {
+    "@types/node": "^16.11.9",
+    "@unocss/reset": "^0.11.2",
     "unocss": "^0.11.2"
   },
   "scripts": {

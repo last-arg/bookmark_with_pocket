@@ -358,7 +358,6 @@ browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
 when isMainModule:
   when defined(release):
     console.log "background.js RELEASE BUILD"
-    # let machine = create
     discard initBackground()
 
   when defined(testing):
@@ -517,7 +516,7 @@ when isMainModule:
       test_machine = newBackgroundMachine(state_data)
       initBackgroundEvents(test_machine)
       test_machine.transition(Login, local_value)
-      # let tabs_opts = TabCreateProps(active: false, url: browser.runtime.getURL("options/options.html"))
+      # let tabs_opts = TabCreateProps(active: true, url: browser.runtime.getURL("options/options.html"))
       # discard browser.tabs.create(tabs_opts)
 
     proc cleanup() {.async.} =

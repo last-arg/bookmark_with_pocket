@@ -2,13 +2,14 @@ build-css:
   npx unocss options/options.html src/options_page.nim -o dist/main.css
 
 watch-css:
-  npx unocss options/options.html src/options_page.nim -o dist/main.css --watch
+  npx unocss options/options.html src/options_page.nim src/styles/main.css -o dist/main.css --watch
 
 build file='background' d='debug':
   nim js -d:{{d}} src/{{file}}.nim
 
 build-background:
-  nim js -d:testing src/background.nim
+  just build background testing
+  # nim js -d:testing src/background.nim
 
 build-options_page:
   just build options_page testing
@@ -23,12 +24,12 @@ watch-js-content:
   watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options_page.nim' 'just build-content'
 
 watch-js:
-  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' -i 'src/content_script.nim' 'just build background testing'
+  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' -i 'src/content_script.nim' 'just build-background'
   # watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/content_script.nim' 'just build options_page'
 dev:
+  just watch-css &
   just watch-options_page &
-  just watch-js &
-  just watch-css
+  just watch-js
 
 build-ext: build-background build-options_page
   zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
