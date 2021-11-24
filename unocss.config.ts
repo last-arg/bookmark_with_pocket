@@ -6,6 +6,7 @@ import fs from "fs";
 const config = defineConfig({
   rules: [
     [/^stack\-?(\d*)(\w*)$/, ruleStack],
+    [/^l-grid-?(.*)$/, ruleLayoutGrid, {layer: "component"}],
   ],
   shortcutsLayer: "component",
   shortcuts: [
@@ -50,6 +51,28 @@ ${classSelector} > * + * { margin-top: var(${css_attr}, 1.5rem); }
   if (nr !== '') return `${classSelector} { ${css_attr}: ${nr / 4}rem; }`
 
   return `/* Failed to generate stack rule from ${selector} */`
+}
+
+async function ruleLayoutGrid([selector, min_width], {generator}) {
+  const classSelector = "." + escapeSelector(selector)
+  if (min_width === '') {
+    return `
+${classSelector} {
+  display: grid;
+  grid-gap: 1rem;
+  grid-template-columns: 100%;
+}
+@supports (width: min(var(--grid-min), 100%)) {
+  ${classSelector} { grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-min), 100%), 1fr)); }
+}
+    `
+  }
+
+  const [,,attrs] = await generator.parseUtil(min_width)
+  const value = attrs[0][1]
+  if (value) return `${classSelector} { --grid-min: ${value} }`
+
+  return `/* Failed to generate l-grid rule from ${selector} */`
 }
 
 export default config

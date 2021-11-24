@@ -6,3 +6,9 @@ textarea {
   padding: 0 0.25rem;
 }
 
+.fieldset-wrapper {
+  width: 100%;
+  flex-basis: 355px;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
