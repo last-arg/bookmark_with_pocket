@@ -210,8 +210,12 @@ proc init() {.async.} =
       const rulesKey = rulesName + "_rules"
       const config = await browser.storage.local.get(rulesKey)
       const baseItem = this.querySelector("ul > li")
-      const df = `renderAll`(this.rulesName, baseItem.cloneNode(true), config.add_rules)
-      `addRuleNodeReset`(rulesName, df.children.length, baseItem)
+      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config.add_rules)
+      if (df.children.length) {
+        baseItem.remove()
+      } else {
+        `addRuleNodeReset`(rulesName, df.children.length, baseItem)
+      }
       this.querySelector("ul").prepend(df)
     }
   }
