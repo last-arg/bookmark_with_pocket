@@ -1,70 +1,42 @@
-import jsconsole, asyncjs, dom, jsffi, std/jsformdata
-import web_ext_browser, app_config, app_js_ffi, pocket
+import jsconsole, asyncjs, dom
+import jsffi except `&`
+import web_ext_browser, app_config, pocket
+import app_js_ffi
 import badresults
+import nodejs/[jsstrformat, jscore]
 
-console.log("test")
-# NOTE: std/jsformdata doesn't have version with FormElement
-proc newFormData(elem: FormElement): FormData {.importcpp: "new FormData(@)".}
-# Use std/jsformdata function `[]`
-# Can return null if key doesn't exist
-proc get(self: FormData; name: cstring): cstring = self[name]
+type
+  DocumentFragment {.importc.} = ref object of Node
 
-proc tagOptionsToString(tags: seq[seq[cstring]]): cstring =
-  return tags.map(
-    proc(it: seq[cstring]): cstring = it.join(", ")
-  ).join("\n")
+proc newDocumentFragment*(): DocumentFragment {.importcpp: "new DocumentFragment()", constructor.}
+proc append(df: DocumentFragment, node: Node | cstring) {.importcpp.}
+proc closest*(elem: Element, selector: cstring): Element {.importcpp.}
 
-proc optionTagToSeq(s: cstring): seq[seq[cstring]] =
-  return s.split("\n")
-    .map(proc(it: cstring): seq[cstring] =
-      it.split(",")
-      .map(proc(val: cstring): cstring = val.trim())
-      .filter(proc(val: cstring): bool = val.len > 0))
-    .filter(proc(row: seq[cstring]): bool = row.len > 0)
+proc saveOptions(el: FormElement) {.async.} = jsFmt:
+  var add_rules: seq[AddRule] = @[]
+  let elems = el.querySelectorAll("[name=add_tags], [name=add_ignore_tags]")
+  assert(elems.len mod 2 == 0, "Rules: add Pocket link must contain even number of fields")
+  let half_len = elems.len div 2
+  for i in 0..<half_len:
+    let i_tags = i * 2 
+    let i_ignore_tags = i_tags + 1
+    let tags_elem {.exportc.} = elems[i_tags]
+    let checkbox_elem {.exportc.} = elems[i_ignore_tags]
+    assert tags_elem.name == "add_tags",
+      $fmt"Unexpected field name '${tags_elem.name}'. Expected field name 'add_tags'"
+    assert(checkbox_elem.name == "add_ignore_tags",
+      $fmt"Unexpected field name '${checkbox_elem.name}'. Expected field name 'add_ignore_tags'")
 
-import macros, os
-const form_fields: tuple[bools: seq[cstring]; tags: seq[cstring]] = block:
-  var bools: seq[cstring] = @[]
-  var tags: seq[cstring] = @[]
-  # echo "Type declartaion is: ", Config.getTypeImpl[0].getTypeImpl.treerepr
-  for item in Config.getTypeImpl[0].getTypeImpl[2]:
-    let field_name = $item[0]
-    let config_type = item[1]
-    if config_type.kind == nnkSym:
-      if $config_type == "bool":
-        bools.add(field_name)
-      elif $config_type == "cstring":
-        # cstring fields aren't used in html form
-        continue
-      else:
-        raise newException(ValueError, "[WARN] unknown field type in Config -> " &
-            $field_name & ": " & $config_type)
-    elif config_type.kind == nnkBracketExpr and config_type.repr == "seq[seq[cstring]]":
-      tags.add(field_name)
-    else:
-        raise newException(ValueError, "[WARN] unknown field type in Config -> " &
-            $field_name & ": " & $config_type)
+    let tags = tags_elem.value.split(",")
+      .map(proc(val: cstring): cstring = val.strip())
+      .filter(proc(val: cstring): bool = val.len > 0)
+    # Don't add rules with no tags
+    if tags.len == 0: continue
+    add_rules.add AddRule(tags: tags, ignore_tags: checkbox_elem.checked)
 
-  (bools, tags)
-
-proc saveOptions(ev: Event) {.async.} =
-  ev.preventDefault()
-  var config = cast[Config](
-    await browser.storage.local.get(
-      form_fields.bools.concat(form_fields.tags)))
-  let options = newFormData(cast[FormElement](ev.target))
-  for key in form_fields.bools:
-    cast[JsObject](config)[key] = options.get(key) == "on"
-
-  for key in form_fields.tags:
-    cast[JsObject](config)[key] = optionTagToSeq(options.get(key))
-
-  discard await browser.storage.local.set(cast[JsObject](config))
-
-  # Make textarea/input values look uniform/good
-  for key in form_fields.tags:
-    let elem = ev.target.querySelector("#" & key)
-    elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
+  let config = newJsObject()
+  config.add_rules = toJs(add_rules)
+  discard await browser.storage.local.set(config)
 
 
 const event_once_opt = AddEventListenerOptions(once: true, capture: false,
@@ -126,10 +98,69 @@ proc initLogoutButton() =
     discard browser.runtime.sendMessage(msg)
   , event_once_opt)
 
+
+proc addRuleNodeReset(rules_name: cstring, index: int, node: Node) =
+  let tagName = rules_name & "_tags" & "_" & $index
+  node.querySelector("label[for]").setAttribute("for", tagName) 
+  let tagsElem = node.querySelector("textarea")
+  tagsElem.id = tagName
+  tagsElem.defaultValue = ""
+  tagsElem.value = ""
+  if rules_name == "add":
+    let checkboxElem = node.querySelector("input[type=checkbox]")
+    checkboxElem.defaultChecked = false
+    checkboxElem.checked = false
+
+
+proc handleTagRules(ev: Event) =
+  let elem = cast[Element](ev.target)
+  if elem.nodeName != "BUTTON": return
+
+  if elem.classList.contains("js-new-rule"):
+    let fieldSetElem = elem.closest("fieldset")
+    let ulElem = fieldSetElem.querySelector("ul")
+    let rulesName = fieldSetElem.getAttribute("rules-name")
+    let liElem = cast[Element](cast[JsObject](ulElem).lastElementChild)
+    let newNode = liElem.cloneNode(true)
+    let next_index = block:
+      let values = newNode.querySelector("label[for]").getAttribute("for").split("_")
+      var result = 0
+      if values.len == 3:
+        let int_val = parseInt(values[2])
+        if not isNan(cast[BiggestFloat](int_val)):
+          result = int_val + 1
+      result 
+    addRuleNodeReset(rulesName, next_index, newNode)
+    ulElem.appendChild(newNode)
+  elif elem.classList.contains("js-remove-rule"):
+    elem.closest("li").remove()
+  else:
+    console.error "Unhandled button was pressed"
+
+proc renderAll(name: cstring, node: Node, rules: seq[AddRule]): DocumentFragment =
+  let tagNameBase = name & "_tags"
+  let ignoreTagsNameBase = name & "_ignore_tags"
+
+  let df = newDocumentFragment()
+  for i, rule in rules:
+    let tagName = tagNameBase & "_" & $i
+    let newNode = node.cloneNode(true)
+    newNode.querySelector("label[for]").setAttribute("for", tagName) 
+    let tagsElem = newNode.querySelector("textarea")
+    tagsElem.id = tagName
+    tagsElem.defaultValue = rule.tags.join ", "
+    if name == "add":
+      newNode.querySelector("input[type=checkbox]").defaultChecked = rule.ignore_tags
+
+    df.append newNode
+
+  return df
+
+
+
 proc init() {.async.} =
-  console.log form_fields
   let storage = await browser.storage.local.get()
-  console.log storage
+  console.log "storage", storage
   var config = cast[Config](storage)
 
   if storage == jsUndefined and storage["access_token"] == jsUndefined:
@@ -139,23 +170,60 @@ proc init() {.async.} =
   else:
     initLogoutButton()
 
-  let form_elem = document.querySelector(".options")
+  let form_elem = cast[FormElement](document.querySelector(".options"))
 
-  for key in form_fields.bools:
-    let elem = form_elem.querySelector("#" & key)
-    elem.checked = get[bool](config, key)
+  # for key in form_fields.bools:
+  #   let elem = form_elem.querySelector("#" & key)
+  #   elem.checked = get[bool](config, key)
 
-  for key in form_fields.tags:
-    let elem = form_elem.querySelector("#" & key)
-    elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
+  # for key in form_fields.tags:
+  #   let elem = form_elem.querySelector("#" & key)
+  #   elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
 
   form_elem.addEventListener("submit", proc(ev: Event) =
     ev.preventDefault()
-    discard saveOptions(ev)
+    discard saveOptions(cast[FormElement](ev.target))
   )
+
+  # block:
+    # # @debug
+    # let test = newJsObject()
+    # test.add_rules = toJs(@[
+    #   AddRule(tags: @[cstring"tag1", "t2", "hello", "world"], ignore_tags: true),
+    #   AddRule(tags: @[cstring"tag2", "t3"], ignore_tags: false)
+    # ])
+    # discard await browser.storage.local.set(test)
+
+  {.emit: """
+  class TagRules extends HTMLFieldSetElement {
+    constructor() {
+      super()
+      this.addEventListener("click", `handleTagRules`)
+    }
+
+    async connectedCallback() {
+      const rulesName = this.getAttribute("rules-name")
+      if (!rulesName) {
+        console.error("Extended custom element tag-rules is missing attribute rules-name")
+        return
+      }
+      const rulesKey = rulesName + "_rules"
+      const config = await browser.storage.local.get(rulesKey)
+      const baseItem = this.querySelector("ul > li")
+      const df = `renderAll`(this.rulesName, baseItem.cloneNode(true), config.add_rules)
+      `addRuleNodeReset`(rulesName, df.children.length, baseItem)
+      this.querySelector("ul").prepend(df)
+    }
+  }
+
+  customElements.define("tag-rules", TagRules, {extends: "fieldset"});
+  """.}
+
+
 
 when isMainModule:
   document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
   when defined(testing) or defined(debug):
     document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
+
 

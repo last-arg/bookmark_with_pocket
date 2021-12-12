@@ -18,65 +18,57 @@
         <button type="button" class="js-logout btn btn-pocket hidden">Log out of Pocket</button>
       </div>
 
-      <form class="options" name"options">
+      <form class="options">
         <h1 class="text-xl text-gray-500">Options</h1>
 
-        <div class="flex flex-wrap gap-6">
-          <div class="fieldset-wrapper">
-            <fieldset class="stack">
-              <legend class="legend-title">Pocket: Adding links</legend>
-              <div class="input-wrapper">
-                <input class="w-4 h-4" type="checkbox" id="always_add_tags" name="always_add_tags"/>
-                <label for="always_add_tags" aria-describeby="always_add_description">Always add to Pocket</label>
-                <p class="border py-1 px-2 rounded-sm mt-2 text-sm bg-indigo-50 border-white" id="always_add_description">Ignores "add link" and "don't add" tag rules</p>
-              </div>
-
-              <div class="input-wrapper">
-                <p class="ml-1"><label class="" for="add_tags">Add link tag rules</label></p>
-                <p class="TODO hidden">
-                  Every line is a separate <strong>tags rule</strong>.
-                  A <strong>tag rule</strong> contains one or more comma separated tags.
-                  For <strong>tag rule</strong> to be applied all the tags on a line must be in bookmark's tags field.
-                </p>
-                <textarea class="textbox" id="add_tags" name="add_tags"></textarea>
-              </div>
-
-              <div class="input-wrapper">
-                <p class="ml-1"><label for="no_add_tags">Don't add tag rules</label></p>
-                <textarea class="textbox" id="no_add_tags" name="no_add_tags"></textarea>
-              </div>
-            </fieldset>
+        <div class="fieldset-wrapper">
+          <div class="input-wrapper">
+            <input class="w-4 h-4" type="checkbox" id="always_add_tags" name="always_add_tags">
+            <label for="always_add_tags" aria-describeby="always_add_description">Always add to Pocket</label>
+            <p class="border py-1 px-2 rounded-sm mt-2 text-sm bg-indigo-50 border-white" id="always_add_description">Ignores "add link" and "don't add" tag rules</p>
           </div>
 
-          <div class="fieldset-wrapper">
-            <fieldset class="stack">
-              <legend class="legend-title">Pocket: Adding/Removing tags</legend>
-              <div class="input-wrapper">
-                <input class="w-4 h-4" type="checkbox" id="enable_allowed_tags" name="enable_allowed_tags"/>
-                <label for="enable_allowed_tags">Enable allowed tag rules</label>
-                <p class="ml-1 mt-4"><label for="allowed_tags">Allowed tag rules</label></p>
-                <textarea class="textbox" id="allowed_tags" name="allowed_tags"></textarea>
-              </div>
 
-              <div class="input-wrapper">
-                <input class="w-4 h-4" type="checkbox" id="enable_discard_tags" name="enable_discard_tags"/>
-                <label for="enable_discard_tags">Enable discard tag rules</label>
-                <p class="ml-1 mt-4"><label for="discard_tags">Discard tag rules</label></p>
-                <textarea class="textbox" id="discard_tags" name="discard_tags"></textarea>
-              </div>
-            </fieldset>
-          </div>
+          <fieldset is="tag-rules" rules-name="add">
+            <legend>Rules: add Pocket link</legend>
+            <label><input type="checkbox"><span>Only add valid rule's tags to Pocket link (ignore if tags are removed)</span></label>
+            <ul>
+              <li class="bg-truegray-300 flex">
+                <div class="mr-4">
+                  <p><label for="add_tags">Tags<label></p>
+                  <textarea id="add_tags" name="add_tags"></textarea>
+                </div>
+                <div class="flex flex-col justify-between">
+                  <label><span>Remove tags?</span><input type="checkbox" name="add_ignore_tags"></label>
+                  <div class="text-right">
+                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <button class="js-new-rule btn bg-truegray-500">Add new rule</button>
+          </fieldset>
 
-          <div class="fieldset-wrapper">
-            <fieldset class="stack">
-              <legend class="legend-title">Bookmark</legend>
-              <div class="input-wrapper">
-                <p class="ml-1"><label for="remove_bk_tags">Don't add bookmark tag rules</label></p>
-                <textarea class="textbox" id="remove_bk_tags" name="remove_bk_tags">only-pocket</textarea>
-              </div>
-            </fieldset>
-          </div>
+          <!--
+          <fieldset is="tag-rules">
+            <legend>Rules: don't add Pocket link</legend>
+            <ul>
+              <li class="bg-truegray-300 flex">
+                <div class="mr-4">
+                  <p><label for="remove_tags">Tags<label></p>
+                  <textarea id="remove_tags" name="remove_tags"></textarea>
+                </div>
+                <div class="flex flex-col justify-between">
+                  <div class="text-right">
+                    <button class="btn-small bg-truegray-500" type="button">Add</button>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </fieldset>
+          -->
         </div>
+
         <div class="mt-6">
           <button class="btn text-center bg-white text-emerald-600 border-2 border-emerald-400 m-max hover:bg-emerald-400 hover:text-white" type="submit">Save options</button>
         </div>

@@ -17,6 +17,12 @@ type
     enable_discard_tags*: bool
     discard_tags*: seq[seq[cstring]]
     remove_bk_tags*: seq[seq[cstring]]
+    add_rules*: seq[AddRule]
+
+  AddRule* = ref object
+    tags*: seq[cstring]
+    ignore_tags*: bool
+
 
 proc newConfig*(
     access_token: cstring = "",
@@ -29,6 +35,7 @@ proc newConfig*(
     allowed_tags: seq[seq[cstring]] = @[],
     enable_discard_tags: bool = false,
     discard_tags: seq[seq[cstring]] = @[],
+    add_rules: seq[AddRule] = @[],
 ): Config =
   Config(access_token: "",
       username: username,
@@ -39,7 +46,8 @@ proc newConfig*(
       enable_allowed_tags: enable_allowed_tags,
       allowed_tags: allowed_tags,
       enable_discard_tags: enable_discard_tags,
-      discard_tags: discard_tags)
+      discard_tags: discard_tags,
+      add_rules: add_rules)
 
 proc newStateData*(
     tag_ids: seq[cstring] = @[],

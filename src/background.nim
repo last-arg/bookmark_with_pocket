@@ -2,6 +2,7 @@ import dom, jsffi, asyncjs
 import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import badresults, options, tables
+import nodejs/[jsstrformat]
 # TODO: use case matching
 # import fusion/matching
 # {.experimental: "caseStmtMacros".}
@@ -189,18 +190,18 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
     setBadgeNotLoggedIn("fail".cstring)
     return
   # Deconstruct urlencoded data
-  let kvs = body_result.value.split("&")
+  # let kvs = body_result.value.split("&")
   var login_data = newJsObject()
   const username = "username"
   const access_token = "access_token"
-  login_data[access_token] = nil
-  login_data[username] = nil
-  for kv_str in kvs:
-    let kv = kv_str.split("=")
-    if kv[0] == access_token:
-      login_data[access_token] = kv[1]
-    elif kv[0] == username:
-      login_data[username] = kv[1]
+  login_data[access_token] = body_result.value
+  # login_data[username] = nil
+  # for kv_str in kvs:
+  #   let kv = kv_str.split("=")
+  #   if kv[0] == access_token:
+  #     login_data[access_token] = kv[1]
+  #   elif kv[0] == username:
+  #     login_data[username] = kv[1]
 
   if login_data[access_token] == nil:
     console.error("Failed to get access_token form Pocket API response")
@@ -534,4 +535,4 @@ when isMainModule:
       finally:
         await cleanup()
 
-    runTestSuite()
+    # runTestSuite()

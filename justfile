@@ -11,8 +11,11 @@ build-background:
   just build background testing
   # nim js -d:testing src/background.nim
 
+watch-background:
+  watchexec -c -r -w ./src/background.nim 'just build-background'
+
 build-options_page:
-  just build options_page testing
+  just build options_page
 
 watch-options_page:
   watchexec -c -r -w ./src/options_page.nim 'just build-options_page'

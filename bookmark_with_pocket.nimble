@@ -14,6 +14,7 @@ skipDirs = @["balls"]
 # Dependencies
 
 requires "nim >= 1.6.0"
-requires "fusion#head"
+requires "nodejs >= 16.10.0"
+requires "fusion >= 1.1"
 requires "https://github.com/disruptek/badresults >= 2.1.0"
 requires "https://github.com/disruptek/balls >= 3.0.0"
