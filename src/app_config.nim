@@ -19,6 +19,9 @@ type
     remove_bk_tags*: seq[seq[cstring]]
     add_rules*: seq[AddRule]
 
+  Rule* = ref object
+    tags*: seq[cstring]
+
   AddRule* = ref object
     tags*: seq[cstring]
     ignore_tags*: bool

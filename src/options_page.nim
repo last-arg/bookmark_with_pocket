@@ -142,10 +142,11 @@ proc handleTagRules(ev: Event) =
 
 proc renderAll(name: cstring, node: Node, rules: seq[AddRule]): DocumentFragment =
   let tagNameBase = name & "_tags"
-  let ignoreTagsNameBase = name & "_ignore_tags"
 
+  console.log tagNameBase
   let df = newDocumentFragment()
   for i, rule in rules:
+    console.log $i
     let tagName = tagNameBase & "_" & $i
     let newNode = node.cloneNode(true)
     newNode.querySelector("label[for]").setAttribute("for", tagName) 
@@ -204,7 +205,7 @@ proc init() {.async.} =
       const rulesKey = rulesName + "_rules"
       const config = await browser.storage.local.get(rulesKey)
       const baseItem = this.querySelector("ul > li")
-      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config.add_rules)
+      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config[rulesKey] || [])
       if (df.children.length) {
         baseItem.remove()
       } else {
@@ -230,22 +231,58 @@ when isMainModule:
       ])
       discard await browser.storage.local.set(test_data)
 
+    proc testRules() {.async, discardable.} =
+      let test_data = newJsObject()
+      test_data.ignore_rules = toJs(@[
+        Rule(tags: @[cstring"rem_tag1", "remove", "me"]),
+        Rule(tags: @[cstring"dont", "add", "me"])
+      ])
+      discard await browser.storage.local.set(test_data)
+
+    proc addRemoveStorageBtn(rule_name: cstring, add_cb: proc(): Future[void]): array[2, Element] =
+      let add_rule_btn = document.createElement("button")
+      add_rule_btn.textContent = "Add '" & rule_name & "' test data"
+      add_rule_btn.addEventListener("click", proc(_: Event) = discard add_cb())
+
+      let remove_rule_btn = document.createElement("button")
+      remove_rule_btn.textContent = "Remove '" & rule_name & "' test data"
+      remove_rule_btn.addEventListener("click", proc(_: Event) =
+        discard browser.storage.local.remove(rule_name))
+
+      return [add_rule_btn, remove_rule_btn]
+
     proc debugInit() {.async.} =
       document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
       let debug_div = document.createElement("div")
       debug_div.classList.add("debug")
+      let debug_style = document.createElement("style")
+      toJs(debug_style).type = cstring"text/css"
+      debug_style.appendChild(document.createTextNode(cstring"""
+        .debug {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 1rem;
+        }
+        .debug button {
+          padding: 6px 8px;
+          background: #ddd;
+        }
+        .debug button:hover {
+          background: #ccc;
+        }
+      """))
+      document.head.appendChild(debug_style)
+      let debug_p = document.createElement("p")
+      debug_p.textContent = "Debug buttons:"
+      debug_div.appendChild(debug_p)
 
-      let add_rule_btn = document.createElement("button")
-      add_rule_btn.textContent = "Add add_rule test data"
-      add_rule_btn.addEventListener("click", proc(_: Event) = testAddRules())
+      for btn in addRemoveStorageBtn("add_rules", testAddRules):
+        debug_div.appendChild(btn)
 
-      let remove_rule_btn = document.createElement("button")
-      remove_rule_btn.textContent = "Remove add_rule data"
-      remove_rule_btn.addEventListener("click", proc(_: Event) =
-        discard browser.storage.local.remove(cstring"add_rules"))
+      for btn in addRemoveStorageBtn("ignore_rules", testRules):
+        debug_div.appendChild(btn)
 
-      debug_div.appendChild(add_rule_btn)
-      debug_div.appendChild(remove_rule_btn)
       document.body.insertBefore(debug_div, document.body.firstChild)
       block: 
         const json_str = staticRead("../tmp/localstorage.json")
