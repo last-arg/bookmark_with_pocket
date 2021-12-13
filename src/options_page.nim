@@ -3,7 +3,10 @@ import jsffi except `&`
 import web_ext_browser, app_config, pocket
 import app_js_ffi
 import badresults
-import nodejs/[jsstrformat, jscore]
+import nodejs/[jsstrformat]
+import nodejs/jscore
+import jscore as stdjscore
+
 
 type
   DocumentFragment {.importc.} = ref object of Node
@@ -185,15 +188,6 @@ proc init() {.async.} =
     discard saveOptions(cast[FormElement](ev.target))
   )
 
-  # block:
-    # # @debug
-    # let test = newJsObject()
-    # test.add_rules = toJs(@[
-    #   AddRule(tags: @[cstring"tag1", "t2", "hello", "world"], ignore_tags: true),
-    #   AddRule(tags: @[cstring"tag2", "t3"], ignore_tags: false)
-    # ])
-    # discard await browser.storage.local.set(test)
-
   {.emit: """
   class TagRules extends HTMLFieldSetElement {
     constructor() {
@@ -228,6 +222,40 @@ proc init() {.async.} =
 when isMainModule:
   document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
   when defined(testing) or defined(debug):
-    document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
+    proc testAddRules() {.async, discardable.} =
+      let test_data = newJsObject()
+      test_data.add_rules = toJs(@[
+        AddRule(tags: @[cstring"tag1", "t2", "hello", "world"], ignore_tags: true),
+        AddRule(tags: @[cstring"tag2", "t3"], ignore_tags: false)
+      ])
+      discard await browser.storage.local.set(test_data)
+
+    proc debugInit() {.async.} =
+      document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
+      let debug_div = document.createElement("div")
+      debug_div.classList.add("debug")
+
+      let add_rule_btn = document.createElement("button")
+      add_rule_btn.textContent = "Add add_rule test data"
+      add_rule_btn.addEventListener("click", proc(_: Event) = testAddRules())
+
+      let remove_rule_btn = document.createElement("button")
+      remove_rule_btn.textContent = "Remove add_rule data"
+      remove_rule_btn.addEventListener("click", proc(_: Event) =
+        discard browser.storage.local.remove(cstring"add_rules"))
+
+      debug_div.appendChild(add_rule_btn)
+      debug_div.appendChild(remove_rule_btn)
+      document.body.insertBefore(debug_div, document.body.firstChild)
+      block: 
+        const json_str = staticRead("../tmp/localstorage.json")
+        let local_value = cast[JsObject](stdjscore.JSON.parse(json_str))
+        discard await browser.storage.local.set(cast[JsObject](local_value))
+
+
+    discard debugInit()
+    
+
+
 
 

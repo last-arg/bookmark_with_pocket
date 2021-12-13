@@ -501,7 +501,6 @@ when isMainModule:
           skip()
           await testAddBookMark()
 
-
     proc setup() {.async.} =
       await browser.storage.local.clear()
       console.info "TEST: Setup"
@@ -535,4 +534,4 @@ when isMainModule:
       finally:
         await cleanup()
 
-    # runTestSuite()
+    runTestSuite()
