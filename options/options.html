@@ -23,46 +23,50 @@
 
         <div class="fieldset-wrapper">
           <div class="input-wrapper">
-            <input class="w-4 h-4" type="checkbox" id="always_add_tags" name="always_add_tags">
-            <label for="always_add_tags" aria-describeby="always_add_description">Always add to Pocket</label>
+            <input class="w-4 h-4" type="checkbox" id="always_add_pocket" name="always_add_pocket">
+            <label for="always_add_pocket" aria-describeby="always_add_description">Always add to Pocket</label>
             <p class="border py-1 px-2 rounded-sm mt-2 text-sm bg-indigo-50 border-white" id="always_add_description">Ignores "add link" and "don't add" tag rules</p>
           </div>
 
 
-          <fieldset is="tag-rules" rules-name="add">
+          <fieldset>
             <legend>Rules: add Pocket link</legend>
-            <label><input type="checkbox"><span>Only add valid rule's tags to Pocket link (ignore if tags are removed)</span></label>
-            <ul>
-              <li class="bg-truegray-300 flex">
-                <div class="mr-4">
-                  <p><label for="add_tags">Tags<label></p>
-                  <textarea id="add_tags" name="add_tags"></textarea>
-                </div>
-                <div class="flex flex-col justify-between">
-                  <label><span>Remove tags?</span><input type="checkbox" name="add_ignore_tags"></label>
-                  <div class="text-right">
-                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+            <label><input type="checkbox" name="only_tag_valid_rules"><span>Only add valid rule's tags to Pocket link (ignore if tags are removed)</span></label>
+            <tag-rules rules-name="add">
+              <ul>
+                <li class="bg-truegray-300 flex">
+                  <div class="mr-4">
+                    <p><label for="add_tags">Tags<label></p>
+                    <textarea id="add_tags" name="add_tags"></textarea>
                   </div>
-                </div>
-              </li>
-            </ul>
-            <button class="js-new-rule btn bg-truegray-500">Add new rule</button>
+                  <div class="flex flex-col justify-between">
+                    <label><span>Remove tags?</span><input type="checkbox" name="add_remove_tags"></label>
+                    <div class="text-right">
+                      <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+              <button class="js-new-rule btn bg-truegray-500">Add new rule</button>
+            </tag-rules>
           </fieldset>
 
-          <fieldset is="tag-rules" rules-name="ignore">
+          <fieldset>
             <legend>Rules: don't add Pocket link</legend>
-            <ul>
-              <li class="bg-truegray-300 flex">
-                <div class="mr-4">
-                  <p><label for="remove_tags">Tags<label></p>
-                  <textarea id="remove_tags" name="remove_tags"></textarea>
-                </div>
-                <div class="flex flex-col self-end">
-                  <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
-                </div>
-              </li>
-            </ul>
-            <button class="js-new-rule btn bg-truegray-500">Add new rule</button>
+            <tag-rules rules-name="ignore">
+              <ul>
+                <li class="bg-truegray-300 flex">
+                  <div class="mr-4">
+                    <p><label for="ignore_tags">Tags<label></p>
+                    <textarea id="ignore_tags" name="ignore_tags"></textarea>
+                  </div>
+                  <div class="flex flex-col self-end">
+                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+                  </div>
+                </li>
+              </ul>
+              <button class="js-new-rule btn bg-truegray-500">Add new rule</button>
+            </tag-rules>
           </fieldset>
         </div>
 

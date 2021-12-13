@@ -16,30 +16,37 @@ proc append(df: DocumentFragment, node: Node | cstring) {.importcpp.}
 proc closest*(elem: Element, selector: cstring): Element {.importcpp.}
 
 proc saveOptions(el: FormElement) {.async.} = jsFmt:
-  var add_rules: seq[AddRule] = @[]
-  let elems = el.querySelectorAll("[name=add_tags], [name=add_ignore_tags]")
-  assert(elems.len mod 2 == 0, "Rules: add Pocket link must contain even number of fields")
-  let half_len = elems.len div 2
-  for i in 0..<half_len:
-    let i_tags = i * 2 
-    let i_ignore_tags = i_tags + 1
-    let tags_elem {.exportc.} = elems[i_tags]
-    let checkbox_elem {.exportc.} = elems[i_ignore_tags]
-    assert tags_elem.name == "add_tags",
-      $fmt"Unexpected field name '${tags_elem.name}'. Expected field name 'add_tags'"
-    assert(checkbox_elem.name == "add_ignore_tags",
-      $fmt"Unexpected field name '${checkbox_elem.name}'. Expected field name 'add_ignore_tags'")
+  let localData = newJsObject()
+  let rule_sections = el.querySelectorAll("tag-rules")
+  var usedNames = newSeq[cstring]()
+  for section in rule_sections:
+    let rules_name = section.getAttribute("rules-name")
+    let names = section.querySelector("li").querySelectorAll("[name]")
+      .toArray().map(proc(el: Element): cstring = el.name)
+    usedNames.add(names)
+    for name in names:
+      localData[name] = block:
+        let inputs = section.querySelectorAll("[name=" & name & "]")
+        let valueIsBool = cast[InputElement](inputs[0]).type == cstring"checkbox"
+        inputs.toArray().map(proc(el: Element): JsObject =
+          if valueIsBool:
+            # TODO?: instead of saving bools, save indexes where checkbox is ticked(true)
+            toJs(el.checked)
+          else:
+            toJs(
+              el.value.split(",")
+                .map(proc(val: cstring): cstring = val.strip())
+                .filter(proc(val: cstring): bool = val.len > 0)
+            )
+        )
 
-    let tags = tags_elem.value.split(",")
-      .map(proc(val: cstring): cstring = val.strip())
-      .filter(proc(val: cstring): bool = val.len > 0)
-    # Don't add rules with no tags
-    if tags.len == 0: continue
-    add_rules.add AddRule(tags: tags, ignore_tags: checkbox_elem.checked)
+  let selector_list = usedNames.map(proc(value: cstring): cstring = "[name=" & value & "]").join(",")
+  let other_inputs = el.querySelectorAll("[name]:not(" & selector_list & ")")
+  for input in other_inputs:
+    # NOTE: at the moment rest of inputs should only be checkboxes
+    localData[input.name] = input.checked
 
-  let config = newJsObject()
-  config.add_rules = toJs(add_rules)
-  discard await browser.storage.local.set(config)
+  discard await browser.storage.local.set(localData)
 
 
 const event_once_opt = AddEventListenerOptions(once: true, capture: false,
@@ -140,19 +147,33 @@ proc handleTagRules(ev: Event) =
   else:
     console.error "Unhandled button was pressed"
 
-proc renderAll(name: cstring, node: Node, rules: seq[AddRule]): DocumentFragment =
+proc Object_keys*(obj: JsObject): seq[cstring] {.importcpp: "Object.keys(#)".}
+
+proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
   let tagNameBase = name & "_tags"
+  let keys = Object_keys(config)
+
+  let types = newJsAssoc[cstring, cstring]()
+  for key in keys:
+    types[key] = jsTypeOf(config[key][0])
+    if isArray(config[key][0]):
+      types[key] = cstring"array"
 
   let df = newDocumentFragment()
-  for i, rule in rules:
+  for i, item in config[keys[0]]:
     let tagName = tagNameBase & "_" & $i
     let newNode = node.cloneNode(true)
     newNode.querySelector("label[for]").setAttribute("for", tagName) 
     let tagsElem = newNode.querySelector("textarea")
     tagsElem.id = tagName
-    tagsElem.defaultValue = rule.tags.join ", "
-    if name == "add":
-      newNode.querySelector("input[type=checkbox]").defaultChecked = rule.ignore_tags
+    for key in keys:
+      let value = config[key][i]
+      if types[key] == "array":
+        tagsElem.defaultValue = to(value, seq[cstring]).join ", "
+      elif types[key] == "boolean":
+        newNode.querySelector("[name=" & key & "]").defaultChecked = to(value, bool)
+      else:
+        console.error "Unhandled value type " & types[key] & " in renderAll()"
 
     df.append newNode
 
@@ -186,7 +207,7 @@ proc init() {.async.} =
   )
 
   {.emit: """
-  class TagRules extends HTMLFieldSetElement {
+  class TagRules extends HTMLElement {
     constructor() {
       super()
       this.addEventListener("click", `handleTagRules`)
@@ -199,9 +220,10 @@ proc init() {.async.} =
         return
       }
       const rulesKey = rulesName + "_rules"
-      const config = await browser.storage.local.get(rulesKey)
       const baseItem = this.querySelector("ul > li")
-      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config[rulesKey] || [])
+      const names = Array.from(baseItem.querySelectorAll("[name]")).map((el) => el.name)
+      const config = await browser.storage.local.get(names)
+      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config)
       if (df.children.length) {
         baseItem.remove()
       } else {
@@ -211,7 +233,7 @@ proc init() {.async.} =
     }
   }
 
-  customElements.define("tag-rules", TagRules, {extends: "fieldset"});
+  customElements.define("tag-rules", TagRules);
   """.}
 
 
@@ -221,17 +243,18 @@ when isMainModule:
   when defined(testing) or defined(debug):
     proc testAddRules() {.async, discardable.} =
       let test_data = newJsObject()
-      test_data.add_rules = toJs(@[
-        AddRule(tags: @[cstring"tag1", "t2", "hello", "world"], ignore_tags: true),
-        AddRule(tags: @[cstring"tag2", "t3"], ignore_tags: false)
+      test_data.add_tags = toJs(@[
+        @[cstring"tag1", "t2", "hello", "world"],
+        @[cstring"tag2", "t3"]
       ])
+      test_data.add_remove_tags = toJs(@[false, true])
       discard await browser.storage.local.set(test_data)
 
     proc testRules() {.async, discardable.} =
       let test_data = newJsObject()
-      test_data.ignore_rules = toJs(@[
-        Rule(tags: @[cstring"rem_tag1", "remove", "me"]),
-        Rule(tags: @[cstring"dont", "add", "me"])
+      test_data.ignore_tags = toJs(@[
+        @[cstring"rem_tag1", "remove", "me"],
+        @[cstring"dont", "add", "me"]
       ])
       discard await browser.storage.local.set(test_data)
 
@@ -280,11 +303,15 @@ when isMainModule:
         debug_div.appendChild(btn)
 
       document.body.insertBefore(debug_div, document.body.firstChild)
-      block: 
+      block:
         const json_str = staticRead("../tmp/localstorage.json")
-        let local_value = cast[JsObject](stdjscore.JSON.parse(json_str))
-        discard await browser.storage.local.set(cast[JsObject](local_value))
+        let local_value = toJs(stdjscore.JSON.parse(json_str))
+        discard await browser.storage.local.set(toJs(local_value))
 
+      # discard setTimeout(proc() =
+      #   let form_elem = cast[FormElement](document.querySelector(".options"))
+      #   discard saveOptions(form_elem)
+      # , 50)
 
     discard debugInit()
     
