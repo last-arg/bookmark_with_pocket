@@ -143,10 +143,8 @@ proc handleTagRules(ev: Event) =
 proc renderAll(name: cstring, node: Node, rules: seq[AddRule]): DocumentFragment =
   let tagNameBase = name & "_tags"
 
-  console.log tagNameBase
   let df = newDocumentFragment()
   for i, rule in rules:
-    console.log $i
     let tagName = tagNameBase & "_" & $i
     let newNode = node.cloneNode(true)
     newNode.querySelector("label[for]").setAttribute("for", tagName) 
@@ -161,10 +159,8 @@ proc renderAll(name: cstring, node: Node, rules: seq[AddRule]): DocumentFragment
   return df
 
 
-
 proc init() {.async.} =
   let storage = await browser.storage.local.get()
-  console.log "storage", storage
   var config = cast[Config](storage)
 
   if storage == jsUndefined and storage["access_token"] == jsUndefined:
