@@ -12,8 +12,9 @@ type
   DocumentFragment {.importc.} = ref object of Node
 
 proc newDocumentFragment*(): DocumentFragment {.importcpp: "new DocumentFragment()", constructor.}
-proc append(df: DocumentFragment, node: Node | cstring) {.importcpp.}
+proc append*(df: DocumentFragment, node: Node | cstring) {.importcpp.}
 proc closest*(elem: Element, selector: cstring): Element {.importcpp.}
+proc Object_keys*(obj: JsObject): seq[cstring] {.importcpp: "Object.keys(#)".}
 
 proc saveOptions(el: FormElement) {.async.} = jsFmt:
   let localData = newJsObject()
@@ -116,8 +117,8 @@ proc addRuleNodeReset(rules_name: cstring, index: int, node: Node) =
   tagsElem.id = tagName
   tagsElem.defaultValue = ""
   tagsElem.value = ""
-  if rules_name == "add":
-    let checkboxElem = node.querySelector("input[type=checkbox]")
+  let checkboxElem = node.querySelector("input[type=checkbox]")
+  if not isNull(checkboxElem):
     checkboxElem.defaultChecked = false
     checkboxElem.checked = false
 
@@ -147,8 +148,8 @@ proc handleTagRules(ev: Event) =
   else:
     console.error "Unhandled button was pressed"
 
-proc Object_keys*(obj: JsObject): seq[cstring] {.importcpp: "Object.keys(#)".}
 
+# TODO: try to remove name parameter
 proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
   let tagNameBase = name & "_tags"
   let keys = Object_keys(config)
