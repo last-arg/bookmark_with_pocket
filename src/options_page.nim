@@ -21,7 +21,7 @@ proc saveOptions(el: FormElement) {.async.} = jsFmt:
   let rule_sections = el.querySelectorAll("tag-rules")
   var usedNames = newSeq[cstring]()
   for section in rule_sections:
-    let rules_name = section.getAttribute("rules-name")
+    let rules_name = section.getAttribute("rules-prefix")
     let names = section.querySelector("li").querySelectorAll("[name]")
       .toArray().map(proc(el: Element): cstring = el.name)
     usedNames.add(names)
@@ -128,9 +128,9 @@ proc handleTagRules(ev: Event) =
   if elem.nodeName != "BUTTON": return
 
   if elem.classList.contains("js-new-rule"):
-    let fieldSetElem = elem.closest("fieldset")
+    let fieldSetElem = elem.closest("tag-rules")
+    let rulesName = fieldSetElem.getAttribute("rules-prefix")
     let ulElem = fieldSetElem.querySelector("ul")
-    let rulesName = fieldSetElem.getAttribute("rules-name")
     let liElem = cast[Element](cast[JsObject](ulElem).lastElementChild)
     let newNode = liElem.cloneNode(true)
     let next_index = block:
@@ -149,7 +149,6 @@ proc handleTagRules(ev: Event) =
     console.error "Unhandled button was pressed"
 
 
-# TODO: try to remove name parameter
 proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
   let tagNameBase = name & "_tags"
   let keys = Object_keys(config)
@@ -215,9 +214,9 @@ proc init() {.async.} =
     }
 
     async connectedCallback() {
-      const rulesName = this.getAttribute("rules-name")
+      const rulesName = this.getAttribute("rules-prefix")
       if (!rulesName) {
-        console.error("Extended custom element tag-rules is missing attribute rules-name")
+        console.error("Extended custom element tag-rules is missing attribute rules-prefix")
         return
       }
       const rulesKey = rulesName + "_rules"
