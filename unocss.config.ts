@@ -13,6 +13,7 @@ const config = defineConfig({
   shortcuts: [
     ["btn", "px-3 py-2 rounded-sm"],
     ["btn-small", "px-2 py-1 rounded-sm"],
+    ["btn-add-rule", "py-1 px-2 border-4 border-dashed font-bold"],
     ["btn-pocket", "text-sky-500 border-2 border-sky-400 hover:bg-sky-400 hover:text-white"],
     ["textbox", "max-w-50ch w-30ch min-h-8em border-2 rounded-sm border-truegray-300"],
     ["fieldset-wrapper", "bg-indigo-50 p-4 flex-1 basis-10"],

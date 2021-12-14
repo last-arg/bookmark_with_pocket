@@ -31,7 +31,6 @@
 
           <fieldset>
             <legend>Rules: add Pocket link</legend>
-            <label><input type="checkbox" name="only_tag_valid_rules"><span>Only add valid rule's tags to Pocket link (ignore if tags are removed)</span></label>
             <tag-rules rules-prefix="add">
               <ul>
                 <li class="bg-truegray-300 flex">
@@ -39,20 +38,35 @@
                     <p><label for="add_tags">Tags<label></p>
                     <textarea id="add_tags" name="add_tags"></textarea>
                   </div>
-                  <div class="flex flex-col justify-between">
-                    <label><span>Remove tags?</span><input type="checkbox" name="add_remove_tags"></label>
-                    <div class="text-right">
-                      <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
-                    </div>
+                  <div class="self-end">
+                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
                   </div>
                 </li>
               </ul>
-              <button type="button" class="js-new-rule btn bg-truegray-500">Add new rule</button>
+              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
             </tag-rules>
           </fieldset>
 
           <fieldset>
             <legend>Rules: don't add Pocket link</legend>
+            <tag-rules rules-prefix="exclude">
+              <ul>
+                <li class="bg-truegray-300 flex">
+                  <div class="mr-4">
+                    <p><label for="ignore_tags">Tags<label></p>
+                    <textarea id="ignore_tags" name="ignore_tags"></textarea>
+                  </div>
+                  <div class="self-end">
+                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+                  </div>
+                </li>
+              </ul>
+              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
+            </tag-rules>
+          </fieldset>
+
+          <fieldset>
+            <legend>Rules: exclude tags before Pocket link is added</legend>
             <tag-rules rules-prefix="ignore">
               <ul>
                 <li class="bg-truegray-300 flex">
@@ -60,12 +74,12 @@
                     <p><label for="ignore_tags">Tags<label></p>
                     <textarea id="ignore_tags" name="ignore_tags"></textarea>
                   </div>
-                  <div class="flex flex-col self-end">
+                  <div class="self-end">
                     <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
                   </div>
                 </li>
               </ul>
-              <button type="button" class="js-new-rule btn bg-truegray-500">Add new rule</button>
+              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
             </tag-rules>
           </fieldset>
         </div>
