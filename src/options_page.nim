@@ -19,17 +19,10 @@ proc saveOptions(el: FormElement) {.async.} = jsFmt:
     for name in names:
       localData[name] = block:
         let inputs = section.querySelectorAll("[name=" & name & "]")
-        let valueIsBool = cast[InputElement](inputs[0]).type == cstring"checkbox"
-        inputs.toArray().map(proc(el: Element): JsObject =
-          if valueIsBool:
-            # TODO?: instead of saving bools, save indexes where checkbox is ticked(true)
-            toJs(el.checked)
-          else:
-            toJs(
-              el.value.split(",")
-                .map(proc(val: cstring): cstring = val.strip())
-                .filter(proc(val: cstring): bool = val.len > 0)
-            )
+        inputs.toArray().map(proc(el: Element): seq[cstring] =
+          el.value.split(",")
+            .map(proc(val: cstring): cstring = val.strip())
+            .filter(proc(val: cstring): bool = val.len > 0)
         )
 
   let selector_list = usedNames.map(proc(value: cstring): cstring = "[name=" & value & "]").join(",")
@@ -140,12 +133,6 @@ proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
   let tagNameBase = name & "_tags"
   let keys = Object_keys(config)
 
-  let types = newJsAssoc[cstring, cstring]()
-  for key in keys:
-    types[key] = jsTypeOf(config[key][0])
-    if isArray(config[key][0]):
-      types[key] = cstring"array"
-
   let df = newDocumentFragment()
   for i, item in config[keys[0]]:
     let tagName = tagNameBase & "_" & $i
@@ -154,13 +141,7 @@ proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
     let tagsElem = newNode.querySelector("input[type=text]")
     tagsElem.id = tagName
     for key in keys:
-      let value = config[key][i]
-      if types[key] == "array":
-        tagsElem.defaultValue = to(value, seq[cstring]).join ", "
-      elif types[key] == "boolean":
-        newNode.querySelector("[name=" & key & "]").defaultChecked = to(value, bool)
-      else:
-        console.error "Unhandled value type " & types[key] & " in renderAll()"
+      tagsElem.defaultValue = to( config[key][i], seq[cstring]).join ", "
 
     df.append newNode
 
