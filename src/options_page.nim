@@ -180,14 +180,6 @@ proc init() {.async.} =
 
   let form_elem = cast[FormElement](document.querySelector(".options"))
 
-  # for key in form_fields.bools:
-  #   let elem = form_elem.querySelector("#" & key)
-  #   elem.checked = get[bool](config, key)
-
-  # for key in form_fields.tags:
-  #   let elem = form_elem.querySelector("#" & key)
-  #   elem.value = tagOptionsToString(get[seq[seq[cstring]]](config, key))
-
   form_elem.addEventListener("submit", proc(ev: Event) =
     ev.preventDefault()
     discard saveOptions(cast[FormElement](ev.target))
