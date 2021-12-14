@@ -104,14 +104,10 @@ proc initLogoutButton() =
 proc addRuleNodeReset(rules_name: cstring, index: int, node: Node) =
   let tagName = rules_name & "_tags" & "_" & $index
   node.querySelector("label[for]").setAttribute("for", tagName) 
-  let tagsElem = node.querySelector("textarea")
+  let tagsElem = node.querySelector("input[type=text]")
   tagsElem.id = tagName
   tagsElem.defaultValue = ""
   tagsElem.value = ""
-  let checkboxElem = node.querySelector("input[type=checkbox]")
-  if not isNull(checkboxElem):
-    checkboxElem.defaultChecked = false
-    checkboxElem.checked = false
 
 
 proc handleTagRules(ev: Event) =
@@ -155,7 +151,7 @@ proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
     let tagName = tagNameBase & "_" & $i
     let newNode = node.cloneNode(true)
     newNode.querySelector("label[for]").setAttribute("for", tagName) 
-    let tagsElem = newNode.querySelector("textarea")
+    let tagsElem = newNode.querySelector("input[type=text]")
     tagsElem.id = tagName
     for key in keys:
       let value = config[key][i]
