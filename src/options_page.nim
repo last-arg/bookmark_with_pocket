@@ -216,26 +216,25 @@ proc init() {.async.} =
     async connectedCallback() {
       const rulesName = this.getAttribute("rules-prefix")
       if (!rulesName) {
-        console.error("Extended custom element tag-rules is missing attribute rules-prefix")
+        console.error("Custom element tag-rules is missing attribute rules-prefix")
         return
       }
       const rulesKey = rulesName + "_rules"
       const baseItem = this.querySelector("ul > li")
       const names = Array.from(baseItem.querySelectorAll("[name]")).map((el) => el.name)
       const config = await browser.storage.local.get(names)
-      const df = `renderAll`(rulesName, baseItem.cloneNode(true), config)
-      if (df.children.length) {
+      if (config[names[0]].length > 0) {
+        const df = `renderAll`(rulesName, baseItem.cloneNode(true), config)
+        this.querySelector("ul").prepend(df)
         baseItem.remove()
       } else {
-        `addRuleNodeReset`(rulesName, df.children.length, baseItem)
+        `addRuleNodeReset`(rulesName, 0, baseItem)
       }
-      this.querySelector("ul").prepend(df)
     }
   }
 
   customElements.define("tag-rules", TagRules);
   """.}
-
 
 
 when isMainModule:
@@ -296,10 +295,10 @@ when isMainModule:
       debug_p.textContent = "Debug buttons:"
       debug_div.appendChild(debug_p)
 
-      for btn in addRemoveStorageBtn("add_rules", testAddRules):
+      for btn in addRemoveStorageBtn("add_tags", testAddRules):
         debug_div.appendChild(btn)
 
-      for btn in addRemoveStorageBtn("ignore_rules", testRules):
+      for btn in addRemoveStorageBtn("ignore_tags", testRules):
         debug_div.appendChild(btn)
 
       document.body.insertBefore(debug_div, document.body.firstChild)
