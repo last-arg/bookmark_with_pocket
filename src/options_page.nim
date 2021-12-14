@@ -7,7 +7,7 @@ import nodejs/[jsstrformat]
 import nodejs/jscore
 import jscore as stdjscore
 
-proc saveOptions(el: FormElement) {.async.} = jsFmt:
+proc saveOptions(el: FormElement) {.async.} =
   let localData = newJsObject()
   let rule_sections = el.querySelectorAll("tag-rules")
   var usedNames = newSeq[cstring]()
@@ -137,6 +137,23 @@ proc renderAll(base_id: cstring, node: Node, rules: seq[seq[cstring]]): Document
   return df
 
 
+proc tagRulesConnectedCallback(el: Element) {.async.} =
+  let rulesName = el.getAttribute("rules-prefix")
+  if isNull(rulesName):
+    console.error("Custom element 'tag-rules' is missing attribute 'rules-prefix'")
+    return
+  let baseItem = el.querySelector("ul > li")
+  let storageKey = baseItem.querySelector("input[type=text]").name
+  let config = await browser.storage.local.get(storageKey)
+  let rules = cast[seq[seq[cstring]]](config[storageKey])
+  if rules.len > 0:
+    let df = renderAll(storageKey, baseItem.cloneNode(true), rules)
+    el.querySelector("ul").prepend(df)
+    baseItem.remove()
+  else:
+    setRuleNodeValues(baseItem, createRuleId(rulesName, 0))
+
+
 proc init() {.async.} =
   let storage = await browser.storage.local.get()
   var config = cast[Config](storage)
@@ -161,23 +178,8 @@ proc init() {.async.} =
       super()
       this.addEventListener("click", `handleTagRules`)
     }
-
     async connectedCallback() {
-      const rulesName = this.getAttribute("rules-prefix")
-      if (!rulesName) {
-        console.error("Custom element tag-rules is missing attribute rules-prefix")
-        return
-      }
-      const baseItem = this.querySelector("ul > li")
-      const storageKey = baseItem.querySelector("input[type=text]").name
-      const config = await browser.storage.local.get(storageKey)
-      if (config[storageKey].length > 0) {
-        const df = `renderAll`(storageKey, baseItem.cloneNode(true), config[storageKey])
-        this.querySelector("ul").prepend(df)
-        baseItem.remove()
-      } else {
-        `setRuleNodeValues`(baseItem, createRuleId(rulesName, 0))
-      }
+      `tagRulesConnectedCallback`(this)
     }
   }
 
@@ -263,8 +265,4 @@ when isMainModule:
       # , 50)
 
     discard debugInit()
-    
-
-
-
 
