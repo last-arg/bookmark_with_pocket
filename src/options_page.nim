@@ -94,14 +94,14 @@ proc initLogoutButton() =
   , event_once_opt)
 
 
-proc addRuleNodeReset(rules_name: cstring, index: int, node: Node) =
-  let tagName = rules_name & "_tags" & "_" & $index
-  node.querySelector("label[for]").setAttribute("for", tagName) 
+proc setRuleNodeValues(node: Node, tag_name: cstring, default_value: cstring = "") =
+  node.querySelector("label[for]").setAttribute("for", tag_name) 
   let tagsElem = node.querySelector("input[type=text]")
-  tagsElem.id = tagName
-  tagsElem.defaultValue = ""
-  tagsElem.value = ""
+  tagsElem.id = tag_name
+  tagsElem.defaultValue = default_value
+  tagsElem.value = default_value
 
+proc createRuleId(rule_prefix: cstring, index: int): cstring = rule_prefix & "_tags" & "_" & $index
 
 proc handleTagRules(ev: Event) =
   let elem = cast[Element](ev.target)
@@ -121,7 +121,7 @@ proc handleTagRules(ev: Event) =
         if not isNan(cast[BiggestFloat](int_val)):
           result = int_val + 1
       result 
-    addRuleNodeReset(rulesName, next_index, newNode)
+    setRuleNodeValues(newNode, createRuleId(rulesName, next_index))
     ulElem.appendChild(newNode)
   elif elem.classList.contains("js-remove-rule"):
     elem.closest("li").remove()
@@ -129,20 +129,12 @@ proc handleTagRules(ev: Event) =
     console.error "Unhandled button was pressed"
 
 
-proc renderAll(name: cstring, node: Node, config: JsObject): DocumentFragment =
-  let tagNameBase = name & "_tags"
-  let keys = Object_keys(config)
-
+proc renderAll(base_id: cstring, node: Node, rules: seq[seq[cstring]]): DocumentFragment =
   let df = newDocumentFragment()
-  for i, item in config[keys[0]]:
-    let tagName = tagNameBase & "_" & $i
+  for i, tags in rules:
+    let tagName = base_id & "_" & $i
     let newNode = node.cloneNode(true)
-    newNode.querySelector("label[for]").setAttribute("for", tagName) 
-    let tagsElem = newNode.querySelector("input[type=text]")
-    tagsElem.id = tagName
-    for key in keys:
-      tagsElem.defaultValue = to( config[key][i], seq[cstring]).join ", "
-
+    setRuleNodeValues(newNode, tagName, tags.join(", "))
     df.append newNode
 
   return df
@@ -179,16 +171,15 @@ proc init() {.async.} =
         console.error("Custom element tag-rules is missing attribute rules-prefix")
         return
       }
-      const rulesKey = rulesName + "_rules"
       const baseItem = this.querySelector("ul > li")
-      const names = Array.from(baseItem.querySelectorAll("[name]")).map((el) => el.name)
-      const config = await browser.storage.local.get(names)
-      if (config[names[0]].length > 0) {
-        const df = `renderAll`(rulesName, baseItem.cloneNode(true), config)
+      const storageKey = baseItem.querySelector("input[type=text]").name
+      const config = await browser.storage.local.get(storageKey)
+      if (config[storageKey].length > 0) {
+        const df = `renderAll`(storageKey, baseItem.cloneNode(true), config[storageKey])
         this.querySelector("ul").prepend(df)
         baseItem.remove()
       } else {
-        `addRuleNodeReset`(rulesName, 0, baseItem)
+        `setRuleNodeValues`(baseItem, createRuleId(rulesName, 0))
       }
     }
   }
