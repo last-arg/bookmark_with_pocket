@@ -7,15 +7,6 @@ import nodejs/[jsstrformat]
 import nodejs/jscore
 import jscore as stdjscore
 
-
-type
-  DocumentFragment {.importc.} = ref object of Node
-
-proc newDocumentFragment*(): DocumentFragment {.importcpp: "new DocumentFragment()", constructor.}
-proc append*(df: DocumentFragment, node: Node | cstring) {.importcpp.}
-proc closest*(elem: Element, selector: cstring): Element {.importcpp.}
-proc Object_keys*(obj: JsObject): seq[cstring] {.importcpp: "Object.keys(#)".}
-
 proc saveOptions(el: FormElement) {.async.} = jsFmt:
   let localData = newJsObject()
   let rule_sections = el.querySelectorAll("tag-rules")
@@ -239,6 +230,8 @@ proc init() {.async.} =
 
 when isMainModule:
   document.addEventListener("DOMContentLoaded", proc(_: Event) = discard init())
+
+  # Testing
   when defined(testing) or defined(debug):
     proc testAddRules() {.async, discardable.} =
       let test_data = newJsObject()
