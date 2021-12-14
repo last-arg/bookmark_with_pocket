@@ -12,18 +12,15 @@ proc saveOptions(el: FormElement) {.async.} = jsFmt:
   let rule_sections = el.querySelectorAll("tag-rules")
   var usedNames = newSeq[cstring]()
   for section in rule_sections:
-    let rules_name = section.getAttribute("rules-prefix")
-    let names = section.querySelector("li").querySelectorAll("[name]")
-      .toArray().map(proc(el: Element): cstring = el.name)
-    usedNames.add(names)
-    for name in names:
-      localData[name] = block:
-        let inputs = section.querySelectorAll("[name=" & name & "]")
-        inputs.toArray().map(proc(el: Element): seq[cstring] =
-          el.value.split(",")
-            .map(proc(val: cstring): cstring = val.strip())
-            .filter(proc(val: cstring): bool = val.len > 0)
-        )
+    let name = section.querySelector("[name]").name
+    usedNames.add(name)
+    localData[name] = block:
+      let inputs = section.querySelectorAll("[name=" & name & "]")
+      inputs.toArray().map(proc(el: Element): seq[cstring] =
+        el.value.split(",")
+          .map(proc(val: cstring): cstring = val.strip())
+          .filter(proc(val: cstring): bool = val.len > 0)
+      )
 
   let selector_list = usedNames.map(proc(value: cstring): cstring = "[name=" & value & "]").join(",")
   let other_inputs = el.querySelectorAll("[name]:not(" & selector_list & ")")
