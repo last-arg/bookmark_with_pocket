@@ -145,8 +145,8 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
   let baseItem = el.querySelector("ul > li")
   let storageKey = baseItem.querySelector("input[type=text]").name
   let config = await browser.storage.local.get(storageKey)
-  let rules = cast[seq[seq[cstring]]](config[storageKey])
-  if rules.len > 0:
+  let rules = to(config[storageKey], seq[seq[cstring]])
+  if not isUndefined(rules) and rules.len > 0:
     let df = renderAll(storageKey, baseItem.cloneNode(true), rules)
     el.querySelector("ul").prepend(df)
     baseItem.remove()
