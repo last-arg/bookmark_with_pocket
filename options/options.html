@@ -21,25 +21,28 @@
       <form class="options">
         <h1 class="text-xl text-gray-500">Options</h1>
 
-        <div class="fieldset-wrapper">
+        <div class="l-grid l-grid-20rem">
+          <!--
           <div class="input-wrapper">
             <input class="w-4 h-4" type="checkbox" id="always_add_pocket" name="always_add_pocket">
             <label for="always_add_pocket" aria-describeby="always_add_description">Always add to Pocket</label>
             <p class="border py-1 px-2 rounded-sm mt-2 text-sm bg-indigo-50 border-white" id="always_add_description">Ignores "add link" and "don't add" tag rules</p>
           </div>
-
+          -->
 
           <fieldset>
-            <legend>Rules: add Pocket link</legend>
-            <tag-rules rules-prefix="add">
-              <ul>
-                <li class="bg-truegray-300 flex">
-                  <div class="mr-4">
-                    <p><label for="add_tags">Tags<label></p>
-                    <input type="text" id="add_tags" name="add_tags">
-                  </div>
-                  <div class="self-end">
-                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+            <legend class="bg-truegray-200 w-full">Rules: add Pocket link</legend>
+            <tag-rules class="bg-truegray-50 block stack" rules-prefix="add">
+              <ul class="stack">
+                <li>
+                  <p><label class="rule-label" for="add_tags">Tags</label></p>
+                  <div class="flex">
+                    <div class="rule-input-wrapper">
+                      <input class="rule-input" type="text" id="add_tags" name="add_tags">
+                    </div>
+                    <div class="rule-btn-remove-wrapper">
+                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                    </div>
                   </div>
                 </li>
               </ul>

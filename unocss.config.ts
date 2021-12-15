@@ -13,10 +13,14 @@ const config = defineConfig({
   shortcuts: [
     ["btn", "px-3 py-2 rounded-sm"],
     ["btn-small", "px-2 py-1 rounded-sm"],
-    ["btn-add-rule", "py-1 px-2 border-4 border-dashed font-bold"],
+    ["btn-add-rule", "py-0.5 px-2 border-3 border-dashed border-blue-100 text-blue-400 font-bold hover:border-blue-400"],
+    ["rule-label", "bg-blue-100 inline-block px-2"],
+    ["rule-input-wrapper", "p-1 bg-blue-100"],
+    ["rule-input", "border-2 border-transparent hover:border-blue-400"],
+    ["rule-btn-remove-wrapper", "bg-red-50 rounded-r-full p-1"],
+    ["rule-btn-remove", "bg-white block h-full rounded-full px-1.5 hover:bg-red-200"],
     ["btn-pocket", "text-sky-500 border-2 border-sky-400 hover:bg-sky-400 hover:text-white"],
     ["textbox", "max-w-50ch w-30ch min-h-8em border-2 rounded-sm border-truegray-300"],
-    ["fieldset-wrapper", "bg-indigo-50 p-4 flex-1 basis-10"],
     ["input-wrapper", "bg-indigo-100 p-2 w-max"],
     ["legend-title", "text-lg border-b-4 border-indigo-100 text-indigo-900"],
   ],
@@ -77,9 +81,11 @@ ${classSelector} {
     `
   }
 
-  const [,,attrs] = await generator.parseUtil(min_width)
-  const value = attrs[0][1]
-  if (value) return { "--grid-min": value }
+  // TODO: make min_width work without unit
+  // const [,,attrs] = await generator.parseUtil(`w-${min_width}`)
+  // console.log("attr: ", attrs)
+  // const value = attrs[0][1]
+  if (min_width.length > 0) return { "--grid-min": min_width }
 
   return `/* Error: Failed to generate l-grid rule from ${selector} */`
 }
