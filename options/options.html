@@ -21,7 +21,7 @@
       <form class="options">
         <h1 class="text-xl text-gray-500">Options</h1>
 
-        <div class="l-grid l-grid-20rem">
+        <div class="max-w-400px stack stack-12">
           <!--
           <div class="input-wrapper">
             <input class="w-4 h-4" type="checkbox" id="always_add_pocket" name="always_add_pocket">
@@ -31,8 +31,8 @@
           -->
 
           <fieldset>
-            <legend class="bg-truegray-200 w-full">Rules: add Pocket link</legend>
-            <tag-rules class="bg-truegray-50 block stack" rules-prefix="add">
+            <legend class="rule-title">Rules: add Pocket link</legend>
+            <tag-rules class="rule-container stack" rules-prefix="add">
               <ul class="stack">
                 <li>
                   <p><label class="rule-label" for="add_tags">Tags</label></p>
@@ -46,43 +46,47 @@
                   </div>
                 </li>
               </ul>
-              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
+              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
             </tag-rules>
           </fieldset>
 
           <fieldset>
-            <legend>Rules: don't add Pocket link</legend>
-            <tag-rules rules-prefix="ignore">
-              <ul>
-                <li class="bg-truegray-300 flex">
-                  <div class="mr-4">
-                    <p><label for="ignore_tags">Tags<label></p>
-                    <input type="text" id="ignore_tags" name="ignore_tags">
-                  </div>
-                  <div class="self-end">
-                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+            <legend class="rule-title">Rules: don't add Pocket link</legend>
+            <tag-rules class="rule-container stack" rules-prefix="ignore">
+              <ul class="stack">
+                <li>
+                  <p><label class="rule-label" for="ignore_tags">Tags<label></p>
+                  <div class="flex">
+                    <div class="rule-input-wrapper">
+                      <input class="rule-input" type="text" id="ignore_tags" name="ignore_tags">
+                    </div>
+                    <div class="rule-btn-remove-wrapper">
+                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                    </div>
                   </div>
                 </li>
               </ul>
-              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
+              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
             </tag-rules>
           </fieldset>
 
           <fieldset>
-            <legend>Rules: exclude tags before Pocket link is added</legend>
-            <tag-rules rules-prefix="exclude">
-              <ul>
-                <li class="bg-truegray-300 flex">
-                  <div class="mr-4">
-                    <p><label for="exclude_tags">Tags<label></p>
-                    <input type="text" id="exclude_tags" name="exclude_tags">
-                  </div>
-                  <div class="self-end">
-                    <button class="js-remove-rule btn-small bg-truegray-500" type="button">Remove</button>
+            <legend class="rule-title">Rules: exclude tags before Pocket link is added</legend>
+            <tag-rules class="rule-container stack" rules-prefix="exclude">
+              <ul class="stack">
+                <li>
+                  <p><label class="rule-label" for="exclude_tags">Tags<label></p>
+                  <div class="flex">
+                    <div class="rule-input-wrapper">
+                      <input class="rule-input" type="text" id="exclude_tags" name="exclude_tags">
+                    </div>
+                    <div class="rule-btn-remove-wrapper">
+                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                    </div>
                   </div>
                 </li>
               </ul>
-              <button type="button" class="js-new-rule btn-add-rule">+ Add new rule</button>
+              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
             </tag-rules>
           </fieldset>
         </div>

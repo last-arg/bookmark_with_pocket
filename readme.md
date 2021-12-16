@@ -28,4 +28,8 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/superfunc/maybe
   - fusion/matching
 - style options page
+  - No rule elements
+    - Don't allow removing last element?
+    - Replace remove element with empty one?
+    - pass saved/cloned element to necessary fn/event?
 
