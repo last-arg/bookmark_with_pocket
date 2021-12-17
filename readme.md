@@ -32,4 +32,5 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
     - Don't allow removing last element?
     - Replace remove element with empty one?
     - pass saved/cloned element to necessary fn/event?
-
+- where JsObject replace nim cast[T](input) with to(input, T)
+- replace newJsObjects with JsObject{...}?

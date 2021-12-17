@@ -108,7 +108,7 @@ proc handleTagRules(ev: Event) =
     let fieldSetElem = elem.closest("tag-rules")
     let rulesName = fieldSetElem.getAttribute("rules-prefix")
     let ulElem = fieldSetElem.querySelector("ul")
-    let liElem = cast[Element](cast[JsObject](ulElem).lastElementChild)
+    let liElem = to(toJs(ulElem).lastElementChild, Element)
     let newNode = liElem.cloneNode(true)
     let next_index = block:
       let values = newNode.querySelector("label[for]").getAttribute("for").split("_")
@@ -155,6 +155,7 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
 
 
 proc init() {.async.} =
+  # TODO: only need to get login info: access_token and username
   let storage = await browser.storage.local.get()
   var config = cast[Config](storage)
 
