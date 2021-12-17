@@ -9,7 +9,7 @@
 
   <body>
     <a id="options-page" target="_blank" href="#">Open options page</a>
-    <div class="p-2">
+    <div class="mx-auto max-w-26rem">
       <div>
         <p class="js-not-logged-in hidden">
           You are not logged into Pocket.
@@ -21,7 +21,7 @@
       <form class="options">
         <h1 class="text-xl text-gray-500">Options</h1>
 
-        <div class="max-w-400px stack stack-12">
+        <div class="stack stack-12">
           <!--
           <div class="input-wrapper">
             <input class="w-4 h-4" type="checkbox" id="always_add_pocket" name="always_add_pocket">
@@ -71,7 +71,7 @@
           </fieldset>
 
           <fieldset>
-            <legend class="rule-title">Rules: exclude tags before Pocket link is added</legend>
+            <legend class="rule-title">Rules: remove tags from Pocket link</legend>
             <tag-rules class="rule-container stack" rules-prefix="exclude">
               <ul class="stack">
                 <li>
@@ -94,8 +94,8 @@
         <div class="mt-6">
           <button class="btn text-center bg-white text-emerald-600 border-2 border-emerald-400 m-max hover:bg-emerald-400 hover:text-white" type="submit">Save options</button>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
     <script src="../dist/options_page.js"></script>
   </body>
 </html>

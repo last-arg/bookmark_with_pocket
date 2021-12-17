@@ -48,9 +48,9 @@ proc initLoginButton() =
         return
       # Deconstruct urlencoded data
       let kvs = body_result.value.split("&")
-      var login_data = newJsObject()
       const username = "username"
       const access_token = "access_token"
+      var login_data = newJsObject()
       login_data[access_token] = nil
       login_data[username] = nil
       for kv_str in kvs:
