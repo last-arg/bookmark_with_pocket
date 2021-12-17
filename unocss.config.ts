@@ -5,9 +5,10 @@ import fs from "fs";
 
 const config = defineConfig({
   rules: [
-    [/^stack\-?(\d*)(\w*)$/, ruleStack],
     [/^basis\-(\d+)(\w*)$/, ruleFlexBasis],
+    [/^stack\-?(\d*)(\w*)$/, ruleStack, {layer: "component"}],
     [/^l-grid-?(\d*)(\w*)$/, ruleLayoutGrid, {layer: "component"}],
+    [/^switcher-?(\d*)(\w*)$/, ruleLayoutGrid, {layer: "component"}],
   ],
   shortcutsLayer: "component",
   shortcuts: [
@@ -94,6 +95,30 @@ ${classSelector} {
   if (nr !== '') return { [css_attr]: `${nr / 4}rem` }
 
   return `/* Error: Failed to generate l-grid rule from ${selector} */`
+}
+
+function ruleSwitcher([selector, nr, unit]) {
+  const css_attr = "--threshold"
+
+  if (nr === '' && unit === '') {
+    const classSelector = "." + escapeSelector(selector)
+    return `
+${classSelector} {
+  display: flex;
+  flex-wrap: wrap;
+  ${css_attr}: 30rem;
+}
+${classSelector} > * {
+  flex-grow: 1;
+  flex-basis: calc((var(${css_attr}) - 100%) * 999)
+}
+    `
+  }
+
+  if (unit !== '') return { [css_attr]: `${nr}${unit}` }
+  if (nr !== '') return { [css_attr]: `${nr / 4}rem` }
+
+  return `/* Error: Failed to generate switcher rule from ${selector} */`
 }
 
 export default config
