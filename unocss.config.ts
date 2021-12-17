@@ -16,8 +16,6 @@ const config = defineConfig({
     ["btn-small", "px-2 py-1 rounded-sm"],
     ["btn-pocket", "text-sky-500 border-2 border-sky-400 hover:bg-sky-400 hover:text-white"],
 
-    ["input-wrapper", "bg-indigo-100 p-2"],
-
     ["rule-btn-add", "py-0.5 px-2 border-3 border-dashed text-center border-blue-100 text-blue-400 font-bold hover:border-blue-400 focus:border-blue-400"],
     ["rule-label", "bg-blue-100 inline-block px-1"],
     ["rule-input-wrapper", "p-1 bg-blue-100 flex-1"],

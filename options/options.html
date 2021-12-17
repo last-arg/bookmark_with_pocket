@@ -18,18 +18,28 @@
         <button type="button" class="js-logout btn btn-pocket hidden">Log out of Pocket</button>
       </div>
 
-      <form class="options">
-        <h1 class="text-xl text-gray-500">Options</h1>
+      <h1 class="text-xl text-gray-500">Options</h1>
+      <form class="options stack">
+        <div>
+          <p class="rule-title">General</p>
+          <ul class="rule-container">
+            <li class="border-2 border-blue-100">
+              <div class="flex bg-blue-100 p-2">
+                <input class="w-5 h-5 mr-2" type="checkbox" id="always_add_pocket" name="always_add_pocket">
+                <label class="leading-1.3em" for="always_add_pocket" aria-describeby="always_add_description">Add every bookmark to Pocket</label>
+              </div>
+              <div class="text-sm bg-blue-50 p-2">
+                <pid="always_add_description">Enabling will ignore rules:</p>
+                <ul class="list-disc list-inside">
+                  <li>"add Pocket link"</li>
+                  <li>"don't add Pocket link"</li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
 
         <div class="stack stack-12">
-          <!--
-          <div class="input-wrapper">
-            <input class="w-4 h-4" type="checkbox" id="always_add_pocket" name="always_add_pocket">
-            <label for="always_add_pocket" aria-describeby="always_add_description">Always add to Pocket</label>
-            <p class="border py-1 px-2 rounded-sm mt-2 text-sm bg-indigo-50 border-white" id="always_add_description">Ignores "add link" and "don't add" tag rules</p>
-          </div>
-          -->
-
           <fieldset>
             <legend class="rule-title">Rules: add Pocket link</legend>
             <tag-rules class="rule-container stack" rules-prefix="add">
