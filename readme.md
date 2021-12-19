@@ -34,4 +34,3 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
     - pass saved/cloned element to necessary fn/event?
 - where JsObject replace nim cast[T](input) with to(input, T)
 - open/close rule lists
-- add option: twitch api key

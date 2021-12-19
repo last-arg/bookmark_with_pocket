@@ -155,14 +155,14 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
 
 
 proc init() {.async.} =
-  # TODO: only need to get login info: access_token and username
-  let storage = await browser.storage.local.get()
-  var config = cast[Config](storage)
+  type StoragePocket = object
+    access_token: cstring
+  let storage = block:
+    let promise_result = await browser.storage.local.get(cstring"access_token")
+    to(promise_result, StoragePocket)
 
-  if storage == jsUndefined and storage["access_token"] == jsUndefined:
+  if isUndefined(storage) or isUndefined(storage.access_token):
     initLoginButton()
-    console.warn("Could not find web extension local config. Generating new config")
-    config = newConfig()
   else:
     initLogoutButton()
 
