@@ -3,7 +3,7 @@ import jsffi except `&`
 import web_ext_browser, app_config, pocket
 import app_js_ffi
 import badresults
-import nodejs/[jsstrformat]
+# import nodejs/[jsstrformat]
 import nodejs/jscore
 import jscore as stdjscore
 
@@ -114,7 +114,7 @@ proc handleTagRules(ev: Event) =
       let new_index = block:
         let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
         if isNan(cast[BiggestFloat](index)): 0 else: index + 1
-      name_tmp.slice(cint(0), cint(start_index)) & $new_index
+      name_tmp.slice(cint(0), cint(start_index)) & cstring($new_index)
     setRuleNodeValues(newNode, new_name)
     ulElem.appendChild(newNode)
     labelElem.focus()
@@ -129,7 +129,7 @@ proc handleTagRules(ev: Event) =
 proc renderAll(base_id: cstring, node: Node, rules: seq[seq[cstring]]): DocumentFragment =
   let df = newDocumentFragment()
   for i, tags in rules:
-    let tagName = base_id & "_" & $i
+    let tagName = base_id & "_" & cstring($i)
     let newNode = node.cloneNode(true)
     setRuleNodeValues(newNode, tagName, tags.join(", "))
     df.append newNode
