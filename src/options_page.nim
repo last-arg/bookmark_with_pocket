@@ -173,19 +173,19 @@ proc init() {.async.} =
     discard saveOptions(cast[FormElement](ev.target))
   )
 
-  {.emit: """
-  class TagRules extends HTMLElement {
-    constructor() {
-      super()
-      this.addEventListener("click", `handleTagRules`)
-    }
-    async connectedCallback() {
-      `tagRulesConnectedCallback`(this)
-    }
+{.emit: """
+class TagRules extends HTMLElement {
+  constructor() {
+    super()
+    this.addEventListener("click", `handleTagRules`)
   }
+  async connectedCallback() {
+    `tagRulesConnectedCallback`(this)
+  }
+}
 
-  customElements.define("tag-rules", TagRules);
-  """.}
+customElements.define("tag-rules", TagRules);
+""".}
 
 
 when isMainModule:
