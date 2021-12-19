@@ -98,27 +98,23 @@ proc setRuleNodeValues(node: Node, tag_name: cstring, default_value: cstring = "
   tagsElem.defaultValue = default_value
   tagsElem.value = default_value
 
-proc createRuleId(rule_prefix: cstring, index: int): cstring = rule_prefix & "_tags" & "_" & $index
-
 proc handleTagRules(ev: Event) =
   let elem = cast[Element](ev.target)
   if elem.nodeName != "BUTTON": return
 
   if elem.classList.contains("js-new-rule"):
     let fieldSetElem = elem.closest("tag-rules")
-    let rulesName = fieldSetElem.getAttribute("rules-prefix")
     let ulElem = fieldSetElem.querySelector("ul")
     let liElem = to(toJs(ulElem).lastElementChild, Element)
     let newNode = liElem.cloneNode(true)
-    let next_index = block:
-      let values = newNode.querySelector("label[for]").getAttribute("for").split("_")
-      var result = 0
-      if values.len == 3:
-        let int_val = parseInt(values[2])
-        if not isNan(cast[BiggestFloat](int_val)):
-          result = int_val + 1
-      result 
-    setRuleNodeValues(newNode, createRuleId(rulesName, next_index))
+    let new_name = block:
+      let name_tmp = newNode.querySelector("label[for]").getAttribute("for")
+      let start_index = name_tmp.lastIndexOf(cstring"_") + 1
+      let new_index = block:
+        let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
+        if isNan(cast[BiggestFloat](index)): 0 else: index + 1
+      name_tmp.slice(cint(0), cint(start_index)) & $new_index
+    setRuleNodeValues(newNode, new_name)
     ulElem.appendChild(newNode)
   elif elem.classList.contains("js-remove-rule"):
     elem.closest("li").remove()
@@ -151,7 +147,8 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
     el.querySelector("ul").prepend(df)
     baseItem.remove()
   else:
-    setRuleNodeValues(baseItem, createRuleId(rulesName, 0))
+    let new_name = baseItem.querySelector("label[for]").getAttribute("for") & "_0"
+    setRuleNodeValues(baseItem, new_name)
 
 
 proc init() {.async.} =

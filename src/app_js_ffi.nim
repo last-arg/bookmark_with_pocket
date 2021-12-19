@@ -10,6 +10,7 @@ proc Object_keys*(obj: JsObject): seq[cstring] {.importcpp: "Object.keys(#)".}
 func toArray*[T](self: seq[T]): seq[T] {.importjs: "Array.from(#)".}
 func isArray*(obj: JsObject): bool {.importjs: "Array.isArray(#)".}
 proc prepend*(node: Node, doc: DocumentFragment) {.importcpp.}
+func lastIndexOf*(self: cstring, value: cstring): int {.importjs: "#.$1(#)".}
 
 func join*(arr: seq[cstring]; sep: cstring): cstring {.importcpp.}
 func filter*[T](arr: seq[T]; fn: proc(it: T): bool {.closure.}): seq[T] {.importcpp.}
