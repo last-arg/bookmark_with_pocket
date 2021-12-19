@@ -134,10 +134,6 @@ proc renderAll(base_id: cstring, node: Node, rules: seq[seq[cstring]]): Document
 
 
 proc tagRulesConnectedCallback(el: Element) {.async.} =
-  let rulesName = el.getAttribute("rules-prefix")
-  if isNull(rulesName):
-    console.error("Custom element 'tag-rules' is missing attribute 'rules-prefix'")
-    return
   let baseItem = el.querySelector("ul > li")
   let storageKey = baseItem.querySelector("input[type=text]").name
   let config = await browser.storage.local.get(storageKey)
