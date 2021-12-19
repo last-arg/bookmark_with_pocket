@@ -107,8 +107,9 @@ proc handleTagRules(ev: Event) =
     let ulElem = fieldSetElem.querySelector("ul")
     let liElem = to(toJs(ulElem).lastElementChild, Element)
     let newNode = liElem.cloneNode(true)
+    let labelElem = newNode.querySelector("label[for]")
     let new_name = block:
-      let name_tmp = newNode.querySelector("label[for]").getAttribute("for")
+      let name_tmp = labelElem.getAttribute("for")
       let start_index = name_tmp.lastIndexOf(cstring"_") + 1
       let new_index = block:
         let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
@@ -116,8 +117,11 @@ proc handleTagRules(ev: Event) =
       name_tmp.slice(cint(0), cint(start_index)) & $new_index
     setRuleNodeValues(newNode, new_name)
     ulElem.appendChild(newNode)
+    labelElem.focus()
   elif elem.classList.contains("js-remove-rule"):
     elem.closest("li").remove()
+    # TODO: resolve when list will become empty
+    # hide last item instead of removing
   else:
     console.error "Unhandled button was pressed"
 
