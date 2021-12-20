@@ -103,25 +103,33 @@ proc handleTagRules(ev: Event) =
   if elem.nodeName != "BUTTON": return
 
   if elem.classList.contains("js-new-rule"):
-    let fieldSetElem = elem.closest("tag-rules")
-    let ulElem = fieldSetElem.querySelector("ul")
-    let liElem = to(toJs(ulElem).lastElementChild, Element)
-    let newNode = liElem.cloneNode(true)
-    let labelElem = newNode.querySelector("label[for]")
-    let new_name = block:
-      let name_tmp = labelElem.getAttribute("for")
-      let start_index = name_tmp.lastIndexOf(cstring"_") + 1
-      let new_index = block:
-        let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
-        if isNan(cast[BiggestFloat](index)): 0 else: index + 1
-      name_tmp.slice(cint(0), cint(start_index)) & cstring($new_index)
-    setRuleNodeValues(newNode, new_name)
-    ulElem.appendChild(newNode)
-    labelElem.focus()
+    let custom_elem = elem.closest("tag-rules")
+    let ulElem = custom_elem.querySelector("ul")
+    if ulElem.classList.contains("hidden"):
+      ulElem.classList.remove("hidden")
+      ulElem.querySelector("input[type='text']").focus()
+    else:
+      let liElem = to(toJs(ulElem).lastElementChild, Element)
+      let newNode = liElem.cloneNode(true)
+      let labelElem = newNode.querySelector("label[for]")
+      let new_name = block:
+        let name_tmp = labelElem.getAttribute("for")
+        let start_index = name_tmp.lastIndexOf(cstring"_") + 1
+        let new_index = block:
+          let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
+          if isNan(cast[BiggestFloat](index)): 0 else: index + 1
+        name_tmp.slice(cint(0), cint(start_index)) & cstring($new_index)
+      setRuleNodeValues(newNode, new_name)
+      ulElem.appendChild(newNode)
+      labelElem.focus()
   elif elem.classList.contains("js-remove-rule"):
-    elem.closest("li").remove()
-    # TODO: resolve when list will become empty
-    # hide last item instead of removing
+    # TODO: where to put focus after element removal?
+    let ul_elem = elem.closest("ul")
+    if ul_elem.children.len > 1:
+      elem.closest("li").remove()
+    else:
+      ul_elem.classList.add("hidden")
+      ul_elem.querySelector("input[type='text']").value = ""
   else:
     console.error "Unhandled button was pressed"
 
@@ -148,6 +156,7 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
     baseItem.remove()
   else:
     let new_name = baseItem.querySelector("label[for]").getAttribute("for") & "_0"
+    el.querySelector("ul").classList.add("hidden")
     setRuleNodeValues(baseItem, new_name)
 
 

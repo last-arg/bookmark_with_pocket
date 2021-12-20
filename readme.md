@@ -27,8 +27,6 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/disruptek/badresults
   - https://github.com/superfunc/maybe
   - fusion/matching
-- style options page
-  - No rule items
-    - hide last/only list item?
 - where JsObject replace nim cast[T](input) with to(input, T)
 - open/close rule lists
+- populate web ext storage with fake data
