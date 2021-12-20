@@ -49,6 +49,5 @@ proc newStateData*(
   ): StateData = return StateData(tag_ids: tag_ids,
       tag_timestamps: tag_timestamps, config: config)
 
-proc get*[T](config: Config, key: cstring): T =
-  cast[T](cast[JsObject](config)[key])
+proc get*[T](config: Config, key: cstring): T = to(toJs(config)[key], T)
 

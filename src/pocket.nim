@@ -49,7 +49,7 @@ proc getRequestToken*(): Future[PocketResult[cstring]] {.async.} =
 
   return case resp.status:
     of 200:
-      let body = cast[TokenResponse](await resp.json())
+      let body = to(await resp.json(), TokenResponse)
       if isUndefined(body.code) or isNull(body.code) or body.code.len == 0:
         err(PocketResult[cstring], InvalidRequestToken)
       else:
@@ -85,7 +85,7 @@ proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.as
 
   return case resp.status:
     of 200:
-      let body = cast[AccessTokenResponse](await resp.json())
+      let body = to(await resp.json(), AccessTokenResponse)
       if isUndefined(body.access_token) or isNull(body.access_token) or body.access_token.len == 0:
         err(PocketResult[cstring], InvalidAccessToken)
       else:

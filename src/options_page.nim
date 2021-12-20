@@ -3,9 +3,7 @@ import jsffi except `&`
 import web_ext_browser, app_config, pocket
 import app_js_ffi
 import badresults
-# import nodejs/[jsstrformat]
 import nodejs/jscore
-import jscore as stdjscore
 
 proc saveOptions(el: FormElement) {.async.} =
   let localData = newJsObject()

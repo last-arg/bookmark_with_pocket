@@ -251,8 +251,8 @@ func newBackgroundMachine(data: StateData): Machine =
     discard onCreateBookmark(machine, bookmark)
 
   proc initLoggedIn(param: JsObject) =
-    let username = cast[cstring](param.username)
-    let access_token = cast[cstring](param.access_token)
+    let username = to(param.username, cstring)
+    let access_token = to(param.access_token, cstring)
     # Set browser local storage
     let login_info = newJsObject()
     login_info.username = username
@@ -317,7 +317,7 @@ proc initBackgroundEvents(machine: Machine) =
   discard asyncUpdateTagDates(machine.data)
   proc onUpdateTagsEvent(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc onMessageCommand(msg: JsObject) =
-    let cmd = cast[cstring](msg.cmd)
+    let cmd = to(msg.cmd, cstring)
     if machine.currentState == LoggedIn and cmd == "update_tags":
       console.log "COMMAND: update_tags"
       discard asyncUpdateTagDates(machine.data)
@@ -334,7 +334,7 @@ proc initBackgroundEvents(machine: Machine) =
 
 proc initBackground*() {.async.} =
   let storage = await browser.storage.local.get()
-  let state_data: StateData = newStateData(config = cast[Config](storage))
+  let state_data: StateData = newStateData(config = to(storage, Config))
   let machine = newBackgroundMachine(state_data)
 
   let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
@@ -350,7 +350,7 @@ proc initBackground*() {.async.} =
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   if details.reason == "install":
     proc install() {.async.} =
-      let local_data = cast[JsObject](newConfig())
+      let local_data = toJs(newConfig())
       discard await browser.storage.local.set(local_data)
       await browser.runtime.openOptionsPage()
     discard install()
@@ -431,14 +431,14 @@ when isMainModule:
       let is_pocket_link = await waitForPocketLink()
       check is_pocket_link, "Adding Pocket link failed or took too long"
       let pocket_link = test_machine.test_data["pocket"]
-      let pocket_status = cast[int](pocket_link.status)
+      let pocket_status = to(pocket_link.status, int)
       check pocket_status == 1, "Added pocket link request returned failed status"
 
       # Check that link was added to pocket
       let links_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
       check links_result.isOk()
       let links = links_result.value()
-      let link_key = cast[cstring](pocket_link.item.item_id)
+      let link_key = to(pocket_link.item.item_id, cstring)
       let has_added_url = links.list.hasOwnProperty(link_key)
       check has_added_url, "Could not find added link '" & url_to_add & "'"
 
@@ -455,9 +455,9 @@ when isMainModule:
       let del_result = await modifyLink(test_machine.data.config.access_token, action)
       check del_result.isOk()
       let del_value = del_result.value()
-      let del_status = cast[int](del_value.status)
+      let del_status = to(del_value.status, int)
       check del_status == 1
-      let del_results = cast[seq[bool]](del_value.action_results)
+      let del_results = to(del_value.action_results, seq[bool])
       check del_results[0]
 
       # Add bookmark only (no pocket link)
@@ -470,7 +470,7 @@ when isMainModule:
       let links_empty_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
       check links_empty_result.isOk()
       let links_empty = links_empty_result.value()
-      let list_empty = cast[seq[JsObject]](links_empty.list)
+      let list_empty = to(links_empty.list, seq[JsObject])
       check list_empty.len == 0
 
       p.disconnect()
