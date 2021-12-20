@@ -8,7 +8,7 @@ build file='background' d='debug':
   nim js -d:{{d}} src/{{file}}.nim
 
 build-background:
-  just build background
+  just build background testing
   # nim js -d:testing src/background.nim
 
 watch-background:

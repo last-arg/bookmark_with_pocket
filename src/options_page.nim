@@ -199,34 +199,7 @@ when isMainModule:
 
   # Testing
   when defined(testing) or defined(debug):
-    proc testAddRules() {.async, discardable.} =
-      let test_data = newJsObject()
-      test_data.add_tags = toJs(@[
-        @[cstring"tag1", "t2", "hello", "world"],
-        @[cstring"tag2", "t3"]
-      ])
-      test_data.add_remove_tags = toJs(@[false, true])
-      discard await browser.storage.local.set(test_data)
-
-    proc testRules() {.async, discardable.} =
-      let test_data = newJsObject()
-      test_data.ignore_tags = toJs(@[
-        @[cstring"rem_tag1", "remove", "me"],
-        @[cstring"dont", "add", "me"]
-      ])
-      discard await browser.storage.local.set(test_data)
-
-    proc addRemoveStorageBtn(rule_name: cstring, add_cb: proc(): Future[void]): array[2, Element] =
-      let add_rule_btn = document.createElement("button")
-      add_rule_btn.textContent = "Add '" & rule_name & "' test data"
-      add_rule_btn.addEventListener("click", proc(_: Event) = discard add_cb())
-
-      let remove_rule_btn = document.createElement("button")
-      remove_rule_btn.textContent = "Remove '" & rule_name & "' test data"
-      remove_rule_btn.addEventListener("click", proc(_: Event) =
-        discard browser.storage.local.remove(rule_name))
-
-      return [add_rule_btn, remove_rule_btn]
+    import test_data
 
     proc debugInit() {.async.} =
       document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
@@ -254,22 +227,25 @@ when isMainModule:
       debug_p.textContent = "Debug buttons:"
       debug_div.appendChild(debug_p)
 
-      for btn in addRemoveStorageBtn("add_tags", testAddRules):
-        debug_div.appendChild(btn)
+      let add_test_data = document.createElement("button")
+      add_test_data.textContent = "Add options test data"
+      add_test_data.addEventListener("click", proc(_: Event) =
+        proc run() {.async.} = discard await browser.storage.local.set(testOptionsData())
+        discard run()
+      )
+      debug_div.appendChild(add_test_data)
 
-      for btn in addRemoveStorageBtn("ignore_tags", testRules):
-        debug_div.appendChild(btn)
+      let rm_test_data = document.createElement("button")
+      rm_test_data.textContent = "Remove options test data"
+      rm_test_data.addEventListener("click", proc(_: Event) =
+        proc run() {.async.} = discard await browser.storage.local.remove(Object_keys(testOptionsData()))
+        discard run()
+      )
+      debug_div.appendChild(rm_test_data)
 
       document.body.insertBefore(debug_div, document.body.firstChild)
-      block:
-        const json_str = staticRead("../tmp/localstorage.json")
-        let local_value = toJs(stdjscore.JSON.parse(json_str))
-        discard await browser.storage.local.set(toJs(local_value))
 
-      # discard setTimeout(proc() =
-      #   let form_elem = cast[FormElement](document.querySelector(".options"))
-      #   discard saveOptions(form_elem)
-      # , 50)
+      discard await browser.storage.local.set(testPocketData())
 
     discard debugInit()
 

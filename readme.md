@@ -28,5 +28,10 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/superfunc/maybe
   - fusion/matching
 - where JsObject replace nim cast[T](input) with to(input, T)
+- recheck/redo testing
 - open/close rule lists
 - populate web ext storage with fake data
+- add default for options?
+- options saved (how to update background state machine config?)
+  - send event to background state machine. will get and update config
+  - send new options to background state machine

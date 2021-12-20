@@ -363,6 +363,7 @@ when isMainModule:
 
   when defined(testing):
     import balls, jscore
+    import test_data
 
     console.log "background.js TESTING(DEBUG) BUILD"
     var test_machine: Machine = nil
@@ -475,10 +476,8 @@ when isMainModule:
       p.disconnect()
 
     proc testFilterTags() =
-      let added_tags: seq[cstring] = @["pocket".cstring, "video".cstring,
-          "music".cstring, "book".cstring]
-      let filter_tags: seq[seq[cstring]] = @[@["video".cstring,
-          "pocket".cstring], @["book".cstring]]
+      let added_tags = @[cstring"pocket", "video", "music", "book"]
+      let filter_tags = @[@[cstring"video", "pocket"], @[cstring"book"]]
       var pocket_tags = filterTags(added_tags, filter_tags, @[])
       check pocket_tags.len == 3, "Wrong number of pocket_tags returned"
       for t in pocket_tags:
@@ -504,18 +503,12 @@ when isMainModule:
     proc setup() {.async.} =
       await browser.storage.local.clear()
       console.info "TEST: Setup"
-      let state_data = newStateData(
-        config = newConfig(
-          add_tags = @[@["pocket".cstring], @[
-              "second".cstring, "third".cstring]]))
-      const json_str = staticRead("../tmp/localstorage.json")
-      let local_value = cast[JsObject](JSON.parse(json_str))
-      discard await browser.storage.local.set(cast[JsObject](state_data.config))
-      await createTags(@["pocket".cstring, "book", "hello", "video",
-          "discard_tag"])
+      let state_data = newStateData(config = newConfig())
+      discard await browser.storage.local.set(testOptionsData())
+      await createTags(@[cstring"pocket", "book", "hello", "video", "discard_tag"])
       test_machine = newBackgroundMachine(state_data)
       initBackgroundEvents(test_machine)
-      test_machine.transition(Login, local_value)
+      test_machine.transition(Login, testPocketData())
       # let tabs_opts = TabCreateProps(active: true, url: browser.runtime.getURL("options/options.html"))
       # discard browser.tabs.create(tabs_opts)
 
