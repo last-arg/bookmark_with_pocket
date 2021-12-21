@@ -179,7 +179,7 @@ proc hasAddTag*(tags: seq[cstring], add_tags: seq[seq[cstring]]): bool =
     if add: return true
   return false
 
-proc asyncUpdateTagDates(out_data: StateData): Future[JsObject] {.async.} =
+proc asyncUpdateTagDates(out_data: StateData): Future[void] {.async.} =
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   discard updateTagDates(out_data, tags)
 
@@ -189,19 +189,12 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
     console.error("Pocket authentication failed")
     setBadgeNotLoggedIn("fail".cstring)
     return
-  # Deconstruct urlencoded data
-  # let kvs = body_result.value.split("&")
+
   var login_data = newJsObject()
   const username = "username"
   const access_token = "access_token"
   login_data[access_token] = body_result.value
-  # login_data[username] = nil
-  # for kv_str in kvs:
-  #   let kv = kv_str.split("=")
-  #   if kv[0] == access_token:
-  #     login_data[access_token] = kv[1]
-  #   elif kv[0] == username:
-  #     login_data[username] = kv[1]
+  # TODO: get/save username
 
   if login_data[access_token] == nil:
     console.error("Failed to get access_token form Pocket API response")
@@ -410,70 +403,83 @@ when isMainModule:
       let tags = await browser.bookmarks.getChildren(tags_folder_id)
       return getAddedTags(tags)
 
-    var created_bk_ids = newSeq[cstring]()
     proc testAddBookMark() {.async.} =
-      let p = browser.runtime.connectNative("sqlite_update")
-      const url_to_add = "https://google.com"
-      let msg = await sendPortMessage(p, "tag_inc|pocket,video,discard_tag")
-      check msg != nil, "Can't connnect to sqlite_update native application"
+      var created_bk_ids = newSeq[cstring]()
+      var sqlite_update: Port
+      proc setup() {.async.} =
+        await createTags(@[cstring"pocket", "book", "hello", "video", "discard_tag"])
+        await asyncUpdateTagDates(test_machine.data)
+        sqlite_update = browser.runtime.connectNative("sqlite_update")
+        let msg = await sendPortMessage(sqlite_update, "tag_inc|pocket,video,discard_tag")
+        check msg != nil, "Can't connnect to sqlite_update native application"
+        test_machine.data.config.discard_tags.add(@[@[cstring"discard_tag"], @[cstring"pocket"]])
 
-      test_machine.data.config.discard_tags.add(@[@["discard_tag".cstring], @["pocket".cstring]])
+      proc teardown() =
+        sqlite_update.disconnect()
+        for id in created_bk_ids:
+          discard browser.bookmarks.remove(id)
 
-      # tags that are part of bookmark
-      let added_tags = await getAddedTagsAsync()
-      check added_tags.len == 3, "Wrong count of added tags"
+      proc run() {.async.} =
+        # # tags that are part of bookmark
+        let added_tags = await getAddedTagsAsync()
+        check added_tags.len == 3, "Wrong count of added tags"
 
-      # Add bookmark and pocket link
-      let detail = newCreateDetails(title = "Google", url = url_to_add)
-      let bk1 = await browser.bookmarks.create(detail)
-      created_bk_ids.add(bk1.id)
+        # Add bookmark and pocket link
+        const url_to_add = "https://google.com"
+        let detail = newCreateDetails(title = "Google", url = url_to_add)
+        let bk1 = await browser.bookmarks.create(detail)
+        created_bk_ids.add(bk1.id)
 
-      let is_pocket_link = await waitForPocketLink()
-      check is_pocket_link, "Adding Pocket link failed or took too long"
-      let pocket_link = test_machine.test_data["pocket"]
-      let pocket_status = to(pocket_link.status, int)
-      check pocket_status == 1, "Added pocket link request returned failed status"
+        let is_pocket_link = await waitForPocketLink()
+        check is_pocket_link, "Adding Pocket link failed or took too long"
+        let pocket_link = test_machine.test_data["pocket"]
+        let pocket_status = to(pocket_link.status, int)
+        check pocket_status == 1, "Added pocket link request returned failed status"
 
-      # Check that link was added to pocket
-      let links_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
-      check links_result.isOk()
-      let links = links_result.value()
-      let link_key = to(pocket_link.item.item_id, cstring)
-      let has_added_url = links.list.hasOwnProperty(link_key)
-      check has_added_url, "Could not find added link '" & url_to_add & "'"
+        # Check that link was added to pocket
+        let links_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
+        check links_result.isOk()
+        let links = links_result.value()
+        let link_key = to(pocket_link.item.item_id, cstring)
+        let has_added_url = links.list.hasOwnProperty(link_key)
+        check has_added_url, "Could not find added link '" & url_to_add & "'"
 
-      let link_tags = links.list[link_key].tags
-      var tags_len = 0
-      for _ in link_tags.keys(): tags_len += 1
-      check tags_len == 1
-      check link_tags.hasOwnProperty("video")
+        let link_tags = links.list[link_key].tags
+        var tags_len = 0
+        for _ in link_tags.keys(): tags_len += 1
+        check tags_len == 1
+        check link_tags.hasOwnProperty("video")
 
-      # Delete pocket item
-      var action = newJsObject()
-      action["action"] = "delete".cstring
-      action["item_id"] = link_key
-      let del_result = await modifyLink(test_machine.data.config.access_token, action)
-      check del_result.isOk()
-      let del_value = del_result.value()
-      let del_status = to(del_value.status, int)
-      check del_status == 1
-      let del_results = to(del_value.action_results, seq[bool])
-      check del_results[0]
+        # Delete pocket item
+        var action = newJsObject()
+        action["action"] = "delete".cstring
+        action["item_id"] = link_key
+        let del_result = await modifyLink(test_machine.data.config.access_token, action)
+        check del_result.isOk()
+        let del_value = del_result.value()
+        let del_status = to(del_value.status, int)
+        check del_status == 1
+        let del_results = to(del_value.action_results, seq[bool])
+        check del_results[0]
 
-      # Add bookmark only (no pocket link)
-      discard await sendPortMessage(p, "tag_inc|music,book,no-pocket")
-      let bk2 = await browser.bookmarks.create(
-        newCreateDetails(title = "Google", url = url_to_add))
-      created_bk_ids.add(bk2.id)
+        # Add bookmark only (no pocket link)
+        discard await sendPortMessage(sqlite_update, "tag_inc|music,book,no-pocket")
+        let bk2 = await browser.bookmarks.create(
+          newCreateDetails(title = "Google", url = url_to_add))
+        created_bk_ids.add(bk2.id)
 
-      # Make sure pocket link was deleted
-      let links_empty_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
-      check links_empty_result.isOk()
-      let links_empty = links_empty_result.value()
-      let list_empty = to(links_empty.list, seq[JsObject])
-      check list_empty.len == 0
+        # Make sure pocket link was deleted
+        let links_empty_result = await retrieveLinks(test_machine.data.config.access_token, url_to_add)
+        check links_empty_result.isOk()
+        let links_empty = links_empty_result.value()
+        let list_empty = to(links_empty.list, seq[JsObject])
+        check list_empty.len == 0
 
-      p.disconnect()
+      try:
+        await setup()
+        await run()
+      finally:
+        teardown()
 
     proc testFilterTags() =
       let added_tags = @[cstring"pocket", "video", "music", "book"]
@@ -486,7 +492,6 @@ when isMainModule:
       pocket_tags = filterTags(added_tags, @[], filter_tags)
       check "music" == pocket_tags[0]
 
-
     proc runTestsImpl() {.async.} =
       console.info "TEST: Run"
       suite "background":
@@ -497,16 +502,17 @@ when isMainModule:
           check test_machine.data.config.access_token.len > 0, "'access_token' was not found in extension's local storage"
 
         block add_bookmark:
-          skip()
+          # skip()
           await testAddBookMark()
 
     proc setup() {.async.} =
-      await browser.storage.local.clear()
       console.info "TEST: Setup"
-      let state_data = newStateData(config = newConfig())
+      await browser.storage.local.clear()
       discard await browser.storage.local.set(testOptionsData())
-      await createTags(@[cstring"pocket", "book", "hello", "video", "discard_tag"])
-      test_machine = newBackgroundMachine(state_data)
+      test_machine = newBackgroundMachine(newStateData(config = newConfig()))
+      let tags = await browser.bookmarks.getChildren(tags_folder_id)
+      for tag in tags:
+        discard browser.bookmarks.remove(tag.id)
       initBackgroundEvents(test_machine)
       test_machine.transition(Login, testPocketData())
       # let tabs_opts = TabCreateProps(active: true, url: browser.runtime.getURL("options/options.html"))
@@ -514,10 +520,6 @@ when isMainModule:
 
     proc cleanup() {.async.} =
       console.info "TEST: Cleanup"
-      for id in test_machine.data.tag_ids:
-        discard browser.bookmarks.remove(id)
-      for id in created_bk_ids:
-        discard browser.bookmarks.remove(id)
 
     proc runTestSuite() {.async, discardable.} =
       console.info "TEST: Start"

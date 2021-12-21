@@ -34,3 +34,5 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 - options saved (how to update background state machine config?)
   - send event to background state machine. will get and update config
   - send new options to background state machine
+- Redo Config
+  - Consolidate config and options

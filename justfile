@@ -12,7 +12,7 @@ build-background:
   # nim js -d:testing src/background.nim
 
 watch-background:
-  watchexec -c -r -w ./src -e nim 'just build-background'
+  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' 'just build-background'
 
 build-options_page:
   just build options_page
@@ -27,11 +27,11 @@ watch-js-content:
   watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options_page.nim' 'just build-content'
 
 watch-js:
-  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' -i 'src/content_script.nim' 'just build-background'
-  # watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/content_script.nim' 'just build options_page'
+  watchexec -c -r -w ./src -e nim -i 'src/{options_page, content_script}.nim' 'just build-background' &
+  watchexec -c -r -w ./src -e nim -i 'src/{background, content_script}.nim' 'just build options_page'
+
 dev:
   just watch-css &
-  just watch-options_page &
   just watch-js
 
 build-ext: build-background build-options_page
