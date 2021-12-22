@@ -3,8 +3,8 @@ import jsconsole
 import web_ext_browser, bookmarks, app_config, app_js_ffi, pocket
 import badresults, options, tables
 # TODO: use case matching
-# import fusion/matching
-# {.experimental: "caseStmtMacros".}
+import fusion/matching
+{.experimental: "caseStmtMacros".}
 
 type
   Statecb* = proc(param: JsObject): void
@@ -195,6 +195,17 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
   discard await browser.storage.local.set(login_data)
   machine.transition(Login)
 
+
+proc checkAddToPocket(input_tags: seq[cstring], settings: Settings): Option[seq[cstring]] =
+  if hasNoAddTag(input_tags, settings.no_add_tags):
+    return none[seq[cstring]]()
+
+  if settings.always_add_pocket or hasAddTag(input_tags, settings.add_tags):
+    return some(filterTags(input_tags, settings.exclude_tags))
+
+  return none[seq[cstring]]()
+
+
 proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async.} =
   if bookmark.`type` != "bookmark": return
   let out_data = out_machine.data
@@ -208,21 +219,19 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
   let tags = await browser.bookmarks.getChildren(tags_folder_id)
   let input_tags = updateTagDates(out_data, tags)
 
-  if hasNoAddTag(input_tags, out_data.settings.no_add_tags):
-    return
+  case checkAddToPocket(input_tags, out_data.settings):
+    of Some(@tags):
+      setBadgeLoading(tab_id)
+      let link_result = await addLink(bookmark.url, out_data.pocket_info.access_token, tags)
+      if link_result.isErr():
+        console.error "Failed to add bookmark to Pocket. Error type: " & cstring($link_result.error())
+        setBadgeFailed(tab_id)
+        return
 
-  if out_data.settings.always_add_pocket or hasAddTag(input_tags, out_data.settings.add_tags):
-    setBadgeLoading(tab_id)
-    let filtered_tags = filterTags(input_tags, out_data.settings.exclude_tags)
-    let link_result = await addLink(bookmark.url, out_data.pocket_info.access_token, filtered_tags)
-    if link_result.isErr():
-      console.error "Failed to add bookmark to Pocket. Error type: " & cstring($link_result.error())
-      setBadgeFailed(tab_id)
-      return
+      setBadgeSuccess(tab_id)
+      when defined(testing):
+        out_machine.test_data["pocket"] = link_result.unsafeGet()
 
-    setBadgeSuccess(tab_id)
-    when defined(testing):
-      out_machine.test_data["pocket"] = link_result.unsafeGet()
 
 func newBackgroundMachine(data: StateData): Machine =
   var machine = newMachine(data = data)
