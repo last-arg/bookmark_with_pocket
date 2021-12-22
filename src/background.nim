@@ -454,14 +454,6 @@ when isMainModule:
         let del_results = to(del_value.action_results, seq[bool])
         check del_results[0]
 
-        # Add bookmark only (no pocket link)
-        # TODO: check that it works
-        # TODO?: maybe move it outside of this fn
-        # discard await sendPortMessage(sqlite_update, "tag_inc|music,book,no-pocket")
-        # let bk2 = await browser.bookmarks.create(
-        #   newCreateDetails(title = "Google", url = url_to_add))
-        # created_bk_ids.add(bk2.id)
-
         # Make sure pocket link was deleted
         let links_empty_result = await retrieveLinks(test_machine.data.pocket_info.access_token, url_to_add)
         check links_empty_result.isOk()
@@ -502,7 +494,7 @@ when isMainModule:
           check test_machine.data.pocket_info.access_token.len > 0, "Invalid 'access_token'"
 
         block add_bookmark:
-          skip()
+          # skip()
           await testAddBookMark()
 
     proc setup() {.async.} =

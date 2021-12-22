@@ -27,7 +27,6 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/disruptek/badresults
   - https://github.com/superfunc/maybe
   - fusion/matching
-- recheck/redo background testing
 - open/close rule lists
 - populate web ext storage with fake data
 - options saved (how to update background state machine config?)
