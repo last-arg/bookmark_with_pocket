@@ -508,10 +508,6 @@ when isMainModule:
 
     proc setup() {.async.} =
       console.info "TEST: Setup"
-      await browser.storage.local.clear()
-      # TODO: might not need 'browser.storage.local' for testing
-      # All the necessary info should be available in the state machine (Machine.data)
-      discard await browser.storage.local.set(testOptionsData())
       test_machine = newBackgroundMachine(newStateData())
       let tags = await browser.bookmarks.getChildren(tags_folder_id)
       for tag in tags:
