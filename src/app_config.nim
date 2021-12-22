@@ -2,10 +2,13 @@ import jsffi
 
 type
   StateData* = ref object
-    tag_ids*: seq[cstring]
-    tag_timestamps*: seq[int]
+    tag_info*: TagInfo
     pocket_info*: PocketInfo
     settings*: Settings
+
+  TagInfo* = ref object
+    ids*: seq[cstring]
+    timestamps*: seq[int]
 
   PocketInfo* = ref object
     access_token*: cstring
@@ -34,10 +37,8 @@ proc newSettings*(
   )
 
 proc newStateData*(
-    tag_ids: seq[cstring] = @[],
-    tag_timestamps: seq[int] = @[],
-    settings: Settings = newSettings(),
-    pocket_info: PocketInfo = newPocketInfo(),
-  ): StateData = return StateData(tag_ids: tag_ids,
-      tag_timestamps: tag_timestamps, settings: settings, pocket_info: pocket_info)
+    tag_info = TagInfo(ids: newSeq[cstring](), timestamps: newSeq[int]()),
+    settings = newSettings(),
+    pocket_info = newPocketInfo(),
+  ): StateData = StateData(tag_info: tag_info, settings: settings, pocket_info: pocket_info)
 

@@ -128,16 +128,16 @@ proc setBadgeNotLoggedIn*(text: cstring = "") =
 proc updateTagDates*(out_data: StateData, tags: seq[BookmarkTreeNode]): seq[cstring] =
   var r: seq[cstring] = @[]
   for tag in tags:
-    let id_index = find[seq[cstring], cstring](out_data.tag_ids, tag.id)
+    let id_index = find[seq[cstring], cstring](out_data.tag_info.ids, tag.id)
     if id_index == -1:
       r.add(tag.title)
-      out_data.tag_ids.add(tag.id)
-      out_data.tag_timestamps.add(tag.dateGroupModified)
+      out_data.tag_info.ids.add(tag.id)
+      out_data.tag_info.timestamps.add(tag.dateGroupModified)
       continue
 
-    if tag.dateGroupModified != out_data.tag_timestamps[id_index]:
+    if tag.dateGroupModified != out_data.tag_info.timestamps[id_index]:
       r.add(tag.title)
-      out_data.tag_timestamps[id_index] = tag.dateGroupModified
+      out_data.tag_info.timestamps[id_index] = tag.dateGroupModified
 
   return r
 
@@ -381,10 +381,10 @@ when isMainModule:
     proc getAddedTags(tags: seq[BookmarkTreeNode]): seq[cstring] =
       var r: seq[cstring] = @[]
       for tag in tags:
-        let id_index = find[seq[cstring], cstring](test_machine.data.tag_ids, tag.id)
+        let id_index = find[seq[cstring], cstring](test_machine.data.tag_info.ids, tag.id)
         if id_index == -1:
           r.add(tag.title)
-        elif tag.dateGroupModified != test_machine.data.tag_timestamps[id_index]:
+        elif tag.dateGroupModified != test_machine.data.tag_info.timestamps[id_index]:
           r.add(tag.title)
 
       return r
