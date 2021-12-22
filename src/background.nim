@@ -240,18 +240,9 @@ func newBackgroundMachine(data: StateData): Machine =
   proc onCreateBookmarkEvent(_: cstring, bookmark: BookmarkTreeNode) =
     discard onCreateBookmark(machine, bookmark)
 
-  proc initLoggedIn(param: JsObject) =
-    let username = to(param.username, cstring)
-    let access_token = to(param.access_token, cstring)
-    # Set browser local storage
-    let login_info = newJsObject()
-    login_info.username = username
-    login_info.access_token = access_token
-    discard browser.storage.local.set(login_info)
-
-    # Set current config
-    machine.data.pocket_info.username = username
-    machine.data.pocket_info.access_token = access_token
+  proc initLoggedIn(pocket_info: PocketInfo) =
+    discard browser.storage.local.set(toJs(pocket_info))
+    machine.data.pocket_info = pocket_info
 
     setBadgeNone(none[int]())
     browser.browserAction.onClicked.addListener(onOpenOptionPageEvent)
@@ -284,7 +275,7 @@ func newBackgroundMachine(data: StateData): Machine =
 
   machine.addTransition(InitialLoad, Login, LoggedIn, some[StateCb](proc(param: JsObject) =
     console.log "STATE: InitialLoad -> LoggedIn"
-    initLoggedIn(param)
+    initLoggedIn(to(param, PocketInfo))
   ))
   machine.addTransition(InitialLoad, Logout, LoggedOut, some[StateCb](proc(_: JsObject) =
     console.log "STATE: InitialLoad -> LoggedOut"
@@ -298,7 +289,7 @@ func newBackgroundMachine(data: StateData): Machine =
   machine.addTransition(LoggedOut, Login, LoggedIn, some[StateCb](proc(param: JsObject) =
     console.log "STATE: LoggedOut -> LoggedIn"
     deinitLoggedOut()
-    initLoggedIn(param)
+    initLoggedIn(to(param, PocketInfo))
   ))
 
   return machine
@@ -317,6 +308,8 @@ proc initBackgroundEvents(machine: Machine) =
     elif cmd == "logout":
       console.log "COMMAND: logout"
       machine.transition(Logout)
+    else:
+      console.error "Failed to execute command '" & cmd & "'"
 
   browser.bookmarks.onChanged.addListener(onUpdateTagsEvent)
   browser.bookmarks.onRemoved.addListener(onUpdateTagsEvent)
@@ -516,6 +509,8 @@ when isMainModule:
     proc setup() {.async.} =
       console.info "TEST: Setup"
       await browser.storage.local.clear()
+      # TODO: might not need 'browser.storage.local' for testing
+      # All the necessary info should be available in the state machine (Machine.data)
       discard await browser.storage.local.set(testOptionsData())
       test_machine = newBackgroundMachine(newStateData())
       let tags = await browser.bookmarks.getChildren(tags_folder_id)
