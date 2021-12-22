@@ -41,6 +41,3 @@ proc newStateData*(
   ): StateData = return StateData(tag_ids: tag_ids,
       tag_timestamps: tag_timestamps, settings: settings, pocket_info: pocket_info)
 
-# TODO: fix or remove
-# proc get*[T](config: Config, key: cstring): T = to(toJs(config)[key], T)
-
