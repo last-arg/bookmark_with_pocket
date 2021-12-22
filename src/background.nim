@@ -484,25 +484,33 @@ when isMainModule:
       finally:
         teardown()
 
-    proc testFilterTags() =
-      let input_tags = @[cstring"video", "discard_tag", "pocket"]
-      let exclude_tags = @[@[cstring"discard_tag"], @[cstring"pocket"]]
-      let result = filterTags(input_tags, exclude_tags)
-      let expected: seq[cstring] = @[cstring"video"]
-      check result.len == expected.len, "filterTags() result.len doesn't match expected.len"
-      check result[0] == expected[0], $result[0] & " != " & $expected[0]
+    proc testCheckAddToPocket() =
+      let settings = Settings(
+        add_tags: @[@[cstring"video"]],
+        no_add_tags: @[@[cstring"no-pocket"]],
+        exclude_tags: @[@[cstring"pocket", "discard_tag"]],
+      )
+      block: # Add link to Pocket 
+        let input_tags = @[cstring"video", "discard_tag", "pocket"]
+        let result = checkAddToPocket(input_tags, settings)
+        check result.isSome(), "result None(), expected Some(..)"
+        check result.get()[0] == cstring"video", "extpected value 'video', got '" & $result.get()[0] & "'"
+      block: # Don't add link to Pocket
+        let input_tags = @[cstring"video", "discard_tag", "no-pocket"]
+        let result = checkAddToPocket(input_tags, settings)
+        check result.isNone(), "result Some(..), expected None()"
 
     proc runTestsImpl() {.async.} =
       console.info "TEST: Run"
       suite "background":
         block filter_tags:
-          testFilterTags()
+          testCheckAddToPocket()
 
         block pocket_access_token:
           check test_machine.data.pocket_info.access_token.len > 0, "'access_token' was not found in extension's local storage"
 
         block add_bookmark:
-          # skip()
+          skip()
           await testAddBookMark()
 
     proc setup() {.async.} =
