@@ -1,53 +1,46 @@
 import jsffi
 
 type
-  StateData* = ref object of JsRoot
+  StateData* = ref object
     tag_ids*: seq[cstring]
     tag_timestamps*: seq[int]
-    config*: Config
+    pocket_info*: PocketInfo
+    settings*: Settings
 
-  Config* = ref object of JsRoot
+  PocketInfo* = ref object
     access_token*: cstring
     username*: cstring
-    always_add_tags*: bool
-    add_tags*: seq[seq[cstring]]
-    no_add_tags*: seq[seq[cstring]]
-    enable_allowed_tags*: bool
-    allowed_tags*: seq[seq[cstring]]
-    enable_discard_tags*: bool
-    discard_tags*: seq[seq[cstring]]
-    remove_bk_tags*: seq[seq[cstring]]
+
+  Settings* = ref object
+    always_add_pocket*: bool # Default: false
+    add_tags*: seq[seq[cstring]] # Default [["pocket"]]
+    no_add_tags*: seq[seq[cstring]] # Default [["no-pocket"]]
+    exclude_tags*: seq[seq[cstring]] # Default [["pocket"]]
 
 
-proc newConfig*(
-    access_token: cstring = "",
-    username: cstring = "",
-    always_add_tags = false,
-    add_tags: seq[seq[cstring]] = @[@["pocket".cstring]],
-    no_add_tags: seq[seq[cstring]] = @[@["no-pocket".cstring]],
-    remove_bk_tags: seq[seq[cstring]] = @[@["only-pocket".cstring]],
-    enable_allowed_tags: bool = false,
-    allowed_tags: seq[seq[cstring]] = @[],
-    enable_discard_tags: bool = false,
-    discard_tags: seq[seq[cstring]] = @[],
-): Config =
-  Config(access_token: "",
-      username: username,
-      always_add_tags: always_add_tags,
-      add_tags: add_tags,
-      no_add_tags: no_add_tags,
-      remove_bk_tags: remove_bk_tags,
-      enable_allowed_tags: enable_allowed_tags,
-      allowed_tags: allowed_tags,
-      enable_discard_tags: enable_discard_tags,
-      discard_tags: discard_tags)
+proc newPocketInfo*(access_token: string = "", username: cstring = ""): PocketInfo =
+  PocketInfo(access_token: access_token, username: username)
+
+proc newSettings*(
+  always_add_pocket: bool = false,
+  add_tags: seq[seq[cstring]] = @[@[cstring"pocket"]],
+  no_add_tags: seq[seq[cstring]] = @[@[cstring"no-pocket"]],
+  exclude_tags: seq[seq[cstring]] = @[@[cstring"pocket"]],
+): Settings = Settings(
+    always_add_pocket: always_add_pocket,
+    add_tags: add_tags,
+    no_add_tags: no_add_tags,
+    exclude_tags: exclude_tags,
+  )
 
 proc newStateData*(
     tag_ids: seq[cstring] = @[],
     tag_timestamps: seq[int] = @[],
-    config: Config = newConfig()
+    settings: Settings = newSettings(),
+    pocket_info: PocketInfo = newPocketInfo(),
   ): StateData = return StateData(tag_ids: tag_ids,
-      tag_timestamps: tag_timestamps, config: config)
+      tag_timestamps: tag_timestamps, settings: settings, pocket_info: pocket_info)
 
-proc get*[T](config: Config, key: cstring): T = to(toJs(config)[key], T)
+# TODO: fix or remove
+# proc get*[T](config: Config, key: cstring): T = to(toJs(config)[key], T)
 

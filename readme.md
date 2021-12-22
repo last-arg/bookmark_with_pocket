@@ -36,3 +36,4 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - send new options to background state machine
 - Redo Config
   - Consolidate config and options
+- Add remove bookmark rules
