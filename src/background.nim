@@ -223,13 +223,12 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
       setBadgeLoading(tab_id)
       let link_result = await addLink(bookmark.url, out_data.pocket_info.access_token, tags)
       if link_result.isErr():
-        console.error "Failed to add bookmark to Pocket. Error type: " & cstring($link_result.error())
+        console.error "Failed to add bookmark to Pocket. Error type: " & $link_result.error()
         setBadgeFailed(tab_id)
-        return
-
-      setBadgeSuccess(tab_id)
-      when defined(testing):
-        out_machine.test_data["pocket"] = link_result.unsafeGet()
+      else:
+        setBadgeSuccess(tab_id)
+        when defined(testing):
+          out_machine.test_data["pocket"] = link_result.unsafeGet()
 
 
 func newBackgroundMachine(data: StateData): Machine =
@@ -366,7 +365,7 @@ when isMainModule:
             resolve(false)
             return
 
-          discard setTimeout(checkPocketLink, 100)
+          discard setTimeout(checkPocketLink, 50)
 
         checkPocketLink()
       )
@@ -480,17 +479,18 @@ when isMainModule:
       let settings = Settings(
         add_tags: @[@[cstring"video"]],
         no_add_tags: @[@[cstring"no-pocket"]],
-        exclude_tags: @[@[cstring"pocket", "discard_tag"]],
-      )
+        exclude_tags: @[@[cstring"pocket", "discard_tag"]])
       block: # Add link to Pocket 
         let input_tags = @[cstring"video", "discard_tag", "pocket"]
-        let result = checkAddToPocket(input_tags, settings)
-        check result.isSome(), "result None(), expected Some(..)"
-        check result.get()[0] == cstring"video", "extpected value 'video', got '" & $result.get()[0] & "'"
+        case checkAddToPocket(input_tags, settings)
+          of Some(@tags):
+            check tags.len == 1, "Expected 1, got " & $tags.len
+            check tags[0] == cstring"video", "expected 'video', got '" & $tags[0] & "'"
+          else: fail "got None(), expected Some(..)"
       block: # Don't add link to Pocket
         let input_tags = @[cstring"video", "discard_tag", "no-pocket"]
         let result = checkAddToPocket(input_tags, settings)
-        check result.isNone(), "result Some(..), expected None()"
+        check result.isNone(), "got Some(..), expected None()"
 
     proc runTestsImpl() {.async.} =
       console.info "TEST: Run"
@@ -499,7 +499,7 @@ when isMainModule:
           testCheckAddToPocket()
 
         block pocket_access_token:
-          check test_machine.data.pocket_info.access_token.len > 0, "'access_token' was not found in extension's local storage"
+          check test_machine.data.pocket_info.access_token.len > 0, "Invalid 'access_token'"
 
         block add_bookmark:
           skip()
@@ -507,10 +507,9 @@ when isMainModule:
 
     proc setup() {.async.} =
       console.info "TEST: Setup"
-      test_machine = newBackgroundMachine(newStateData())
       let tags = await browser.bookmarks.getChildren(tags_folder_id)
-      for tag in tags:
-        discard browser.bookmarks.remove(tag.id)
+      for tag in tags: discard browser.bookmarks.remove(tag.id)
+      test_machine = newBackgroundMachine(newStateData())
       initBackgroundEvents(test_machine)
       test_machine.transition(Login, testPocketData())
       # let tabs_opts = TabCreateProps(active: true, url: browser.runtime.getURL("options/options.html"))
