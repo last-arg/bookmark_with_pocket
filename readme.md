@@ -10,7 +10,7 @@ as accurate guess as possible I check tags dateGroupModified field for changes.
 is changed. When only tags field is changed there is no event fired.
 So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
-3) There is no way to change bookmark tags
+3) There is no way to modify bookmark tags
 
 
 ## Resources

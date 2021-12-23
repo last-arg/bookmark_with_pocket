@@ -26,6 +26,10 @@ proc saveOptions(el: FormElement) {.async.} =
     # NOTE: at the moment rest of inputs should only be checkboxes
     localData[input.name] = input.checked
 
+  let msg = newJsObject()
+  msg["cmd"] = cstring "update_settings"
+  msg["data"] = localData
+  discard browser.runtime.sendMessage(msg)
   discard await browser.storage.local.set(localData)
 
 

@@ -306,6 +306,9 @@ proc initBackgroundEvents(machine: Machine) =
     elif cmd == "logout":
       console.log "COMMAND: logout"
       machine.transition(Logout)
+    elif cmd == "update_settings":
+      console.log "COMMAND: update_settings"
+      machine.data.settings = to(msg.data, Settings)
     else:
       console.error "Failed to execute command '" & cmd & "'"
 
@@ -410,7 +413,7 @@ when isMainModule:
           discard browser.bookmarks.remove(id)
 
       proc run() {.async.} =
-        # # tags that are part of bookmark
+        # tags that are part of bookmark
         let added_tags = await getAddedTagsAsync()
         check added_tags.len == 3, "Wrong count of added tags"
 
