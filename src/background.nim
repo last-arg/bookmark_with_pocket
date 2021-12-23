@@ -320,7 +320,7 @@ proc initBackground*() {.async.} =
     newStateData(settings = to(storage, Settings), pocket_info = to(storage, PocketINfo))
   let machine = newBackgroundMachine(state_data)
 
-  let is_logged_in = not (storage == jsUndefined and storage["access_token"] == jsUndefined)
+  let is_logged_in = not (isUndefined(storage) and isUndefined(storage["access_token"]))
   # let is_logged_in = true
   if is_logged_in:
     machine.transition(Login, storage)
