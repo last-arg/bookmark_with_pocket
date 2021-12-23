@@ -5,6 +5,9 @@ import badresults, options, tables
 import fusion/matching
 {.experimental: "caseStmtMacros".}
 
+when defined(testing):
+  var test_data*: JsObject = newJsObject()
+
 type
   Statecb* = proc(param: JsObject): void
   Transition = tuple[next: State, cb: Option[StateCb]]
@@ -13,8 +16,7 @@ type
     currentState*: State
     data*: StateData
     transitions: TableRef[StateEvent, Transition]
-    when defined(testing):
-      test_data*: JsObject
+
 
   State* = enum
     InitialLoad
@@ -27,10 +29,6 @@ type
 
 proc newMachine*(currentState = InitialLoad, data = newStateData(), transitions = newTable[
     StateEvent, Transition]()): Machine =
-  when defined(testing):
-    Machine(currentState: currentState, data: data, transitions: transitions,
-        test_data: newJsObject())
-  else:
     Machine(currentState: currentState, data: data, transitions: transitions, )
 
 proc addTransition*(m: Machine, state: State, event: Event, next: State, cb: Option[StateCb] = none[
@@ -228,7 +226,7 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
       else:
         setBadgeSuccess(tab_id)
         when defined(testing):
-          out_machine.test_data["pocket"] = link_result.unsafeGet()
+          test_data["pocket"] = link_result.unsafeGet()
 
 
 func newBackgroundMachine(data: StateData): Machine =
@@ -349,7 +347,7 @@ when isMainModule:
 
   when defined(testing):
     import balls, jscore
-    import test_data
+    import test_utils
 
     console.log "background.js TESTING(DEBUG) BUILD"
     var test_machine: Machine = nil
@@ -359,7 +357,7 @@ when isMainModule:
         let start = Date.now()
         const max_wait_time = 2000 # milliseconds
         proc checkPocketLink() =
-          if not isUndefined(test_machine.test_data["pocket"]):
+          if not isUndefined(test_data["pocket"]):
             resolve(true)
             return
 
@@ -425,7 +423,7 @@ when isMainModule:
 
         let is_pocket_link = await waitForPocketLink()
         check is_pocket_link, "Adding Pocket link failed or took too long"
-        let pocket_link = test_machine.test_data["pocket"]
+        let pocket_link = test_data["pocket"]
         let pocket_status = to(pocket_link.status, int)
         check pocket_status == 1, "Added pocket link request returned failed status"
 

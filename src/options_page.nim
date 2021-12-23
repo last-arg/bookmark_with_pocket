@@ -201,7 +201,7 @@ when isMainModule:
 
   # Testing
   when defined(testing) or defined(debug):
-    import test_data
+    import test_utils
 
     proc debugInit() {.async.} =
       document.querySelector("#options-page").setAttribute("href", browser.runtime.getURL("options/options.html"))
