@@ -333,9 +333,7 @@ proc initBackground*() {.async.} =
 browser.runtime.onInstalled.addListener(proc(details: InstalledDetails) =
   if details.reason == "install":
     proc install() {.async.} =
-      # TODO: On web ext install set default setting values?
-      # let local_data = toJs(newConfig())
-      # discard await browser.storage.local.set(local_data)
+      discard await browser.storage.local.set(toJs(newSettings()))
       await browser.runtime.openOptionsPage()
     discard install()
 )
