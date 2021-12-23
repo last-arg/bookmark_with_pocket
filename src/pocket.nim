@@ -1,6 +1,6 @@
 import std/[asyncjs, jsffi, jscore, jsfetch, jsheaders, jsconsole]
 import badresults
-import app_js_ffi
+import app_js_ffi, app_config
 # import fusion/matching
 # {.experimental: "caseStmtMacros".}
 
@@ -71,11 +71,7 @@ proc oauthAutheticate*(request_token: cstring): Future[PocketResult[void]] {.asy
   return ok(PocketResult[void])
 
 
-type AccessTokenResponse = ref object
-  access_token: cstring
-  username: cstring
-
-proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.async.} =
+proc getAccessToken*(request_token: cstring): Future[PocketResult[PocketInfo]] {.async.} =
   let body_json = newJsObject()
   body_json["consumer_key"] = consumer_key
   body_json["code"] = request_token
@@ -85,29 +81,29 @@ proc getAccessToken*(request_token: cstring): Future[PocketResult[cstring]] {.as
 
   return case resp.status:
     of 200:
-      let body = to(await resp.json(), AccessTokenResponse)
+      let body = to(await resp.json(), PocketInfo)
       if isUndefined(body.access_token) or isNull(body.access_token) or body.access_token.len == 0:
-        err(PocketResult[cstring], InvalidAccessToken)
+        err(PocketResult[PocketInfo], InvalidAccessToken)
       else:
-        ok(PocketResult[cstring], body.access_token)
+        ok(PocketResult[PocketInfo], body)
     of 403:
       if resp.headers["X-Error"] == "User rejected code.":
-        err(PocketResult[cstring], UserRejectedCode)
+        err(PocketResult[PocketInfo], UserRejectedCode)
       else:
-        err(PocketResult[cstring], StatusForbidden)
+        err(PocketResult[PocketInfo], StatusForbidden)
     else:
       console.log("Unhandled status code: " & cstring($resp.status))
-      err(PocketResult[cstring], InvalidStatusCode)
+      err(PocketResult[PocketInfo], InvalidStatusCode)
 
 
-proc authenticate*(): Future[PocketResult[cstring]] {.async.} =
+proc authenticate*(): Future[PocketResult[PocketInfo]] {.async.} =
   let token_result = await getRequestToken()
 
-  if token_result.isErr(): return token_result
+  if token_result.isErr(): return err(PocketResult[PocketInfo], token_result.error())
   let code = token_result.value
 
   let auth_result = await oauthAutheticate(code)
-  if auth_result.isErr(): return err(PocketResult[cstring], auth_result.error())
+  if auth_result.isErr(): return err(PocketResult[PocketInfo], auth_result.error())
   let token_resp = await getAccessToken(code)
   return token_resp
 

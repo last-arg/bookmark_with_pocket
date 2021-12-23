@@ -43,27 +43,9 @@ proc initLoginButton() =
   let login_button_elem = js_login.querySelector(".js-login")
   login_button_elem.addEventListener("click", proc(_: Event) =
     proc asyncCb() {.async.} =
-      let body_result = await authenticate()
-      if body_result.isErr():
+      let pocket_info = await authenticate()
+      if pocket_info.isErr():
         console.error("Pocket authentication failed")
-        initLoginButton()
-        return
-      # Deconstruct urlencoded data
-      let kvs = body_result.value.split("&")
-      const username = "username"
-      const access_token = "access_token"
-      var login_data = newJsObject()
-      login_data[access_token] = nil
-      login_data[username] = nil
-      for kv_str in kvs:
-        let kv = kv_str.split("=")
-        if kv[0] == access_token:
-          login_data[access_token] = kv[1]
-        elif kv[0] == username:
-          login_data[username] = kv[1]
-
-      if login_data[access_token] == nil:
-        console.error("Failed to get access_token form Pocket API response")
         initLoginButton()
         return
 
@@ -71,7 +53,7 @@ proc initLoginButton() =
       js_login.classList.add("hidden")
       let msg = newJsObject()
       msg["cmd"] = "login".cstring
-      msg["data"] = login_data
+      msg["data"] = pocket_info
       discard browser.runtime.sendMessage(msg)
     discard asyncCb()
   , event_once_opt)

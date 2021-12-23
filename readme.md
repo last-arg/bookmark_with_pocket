@@ -28,8 +28,8 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/superfunc/maybe
   - fusion/matching
 - open/close rule lists
-- populate web ext storage with fake data
-- options saved (how to update background state machine config?)
-  - send event to background state machine. will get and update config
-  - send new options to background state machine
 - Add remove bookmark rules
+- use browser.storage.local.set(...) in options_page or background ("COMMAND") file?
+  - save settings (current: options_page)
+  - login (current: background)
+  - logout (current: background)
