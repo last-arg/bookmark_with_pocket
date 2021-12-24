@@ -1,10 +1,10 @@
-import dom, web_ext_browser
+import dom, web_ext_browser, jsffi
 import jsconsole
 
-console.log "CONTENT SCRIPT"
-document.addEventListener("keydown", proc(event: KeyboardEvent) =
-  console.log "content_script keydown"
+document.addEventListener("keydown", proc(tmp_event: Event) =
+  let event = cast[KeyboardEvent](tmp_event)
   if event.ctrlKey and event.key == "d":
-    console.log "content_script tag update"
-    discard browser.runtime.sendMessage("update_tags".cstring)
+    let msg = newJsObject()
+    msg["cmd"] = cstring "update_tags"
+    discard browser.runtime.sendMessage(msg)
   )
