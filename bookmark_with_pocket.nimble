@@ -2,7 +2,7 @@
 
 version = "0.1.0"
 author = "last_arg"
-description = "Browser extension. When adding bookmarks can also add link to pocket."
+description = "Browser extension that adds bookmark to Pocket if rules allow it"
 license = "MIT"
 srcDir = "src"
 binDir = "dist"
