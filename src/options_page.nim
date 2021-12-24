@@ -164,18 +164,19 @@ proc init() {.async.} =
     discard saveOptions(cast[FormElement](ev.target))
   )
 
-  document.querySelector(".js-rule-btn-toggle").addEventListener("click", proc(ev: Event) =
-    let elem = if ev.target.nodeName == "BUTTON": ev.target else: ev.target.parentElement
-    let curr_val = elem.getAttribute("aria-expanded")
+  for btn in document.querySelectorAll(".js-rule-btn-toggle"):
+    btn.addEventListener("click", proc(ev: Event) =
+      let elem = if ev.target.nodeName == "BUTTON": ev.target else: ev.target.parentElement
+      let curr_val = elem.getAttribute("aria-expanded")
 
-    let tag_rules_elem = cast[Element](elem).closest("fieldset").querySelector("tag-rules")
-    if curr_val == "true":
-      elem.setAttribute("aria-expanded", "false")
-      tag_rules_elem.classList.remove("hidden")
-    else:
-      elem.setAttribute("aria-expanded", "true")
-      tag_rules_elem.classList.add("hidden")
-  )
+      let tag_rules_elem = cast[Element](elem).closest("fieldset").querySelector("tag-rules")
+      if curr_val == "true":
+        elem.setAttribute("aria-expanded", "false")
+        tag_rules_elem.classList.add("hidden")
+      else:
+        elem.setAttribute("aria-expanded", "true")
+        tag_rules_elem.classList.remove("hidden")
+    )
 
 {.emit: """
 class TagRules extends HTMLElement {

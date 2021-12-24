@@ -25,7 +25,7 @@ const config = defineConfig({
     ["rule-btn-remove-wrapper", "bg-red-50 rounded-r-full p-1 text-red-900"],
     ["rule-btn-remove", "bg-white block h-full rounded-full px-1.5 hover:bg-red-200"],
     ["rule-btn-toggle", "bg-white rounded-full w-6 h-6 flex place-items-center justify-center hover:bg-gray-300"],
-    ["rule-title", "bg-gray-100 w-full px-3 py-1 text-4.25"],
+    ["rule-title", "bg-gray-100 w-full px-3 py-1 text-4.25 flex justify-between"],
     ["rule-container", "bg-truegray-50 block p-3"],
   ],
   preflights: [
