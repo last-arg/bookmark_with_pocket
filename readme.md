@@ -29,7 +29,3 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - fusion/matching
 - open/close rule lists
 - Add remove bookmark rules
-- use browser.storage.local.set(...) in options_page or background ("COMMAND") file?
-  - save settings (current: options_page)
-  - login (current: background)
-  - logout (current: background)

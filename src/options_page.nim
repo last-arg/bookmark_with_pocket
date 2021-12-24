@@ -48,12 +48,13 @@ proc initLoginButton() =
         console.error("Pocket authentication failed")
         initLoginButton()
         return
+      discard browser.storage.local.set(toJs(pocket_info.value()))
 
       initLogoutButton()
       js_login.classList.add("hidden")
       let msg = newJsObject()
-      msg["cmd"] = "login".cstring
-      msg["data"] = pocket_info
+      msg["cmd"] = cstring "login"
+      msg["data"] = pocket_info.value()
       discard browser.runtime.sendMessage(msg)
     discard asyncCb()
   , event_once_opt)
@@ -62,7 +63,7 @@ proc initLogoutButton() =
   let js_logout = document.querySelector(".js-logout")
   js_logout.classList.remove("hidden")
   js_logout.addEventListener("click", proc(_: Event) =
-    const empty_string = "".cstring
+    const empty_string = cstring ""
     let login_info = newJsObject()
     login_info.username = empty_string
     login_info.access_token = empty_string

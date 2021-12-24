@@ -190,7 +190,7 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
     return
 
   discard await browser.storage.local.set(login_data)
-  machine.transition(Login)
+  machine.transition(Login, login_data)
 
 
 proc checkAddToPocket(input_tags: seq[cstring], settings: Settings): Option[seq[cstring]] =
@@ -237,7 +237,6 @@ func newBackgroundMachine(data: StateData): Machine =
     discard onCreateBookmark(machine, bookmark)
 
   proc initLoggedIn(pocket_info: PocketInfo) =
-    discard browser.storage.local.set(toJs(pocket_info))
     machine.data.pocket_info = pocket_info
 
     setBadgeNone(none[int]())
@@ -252,15 +251,8 @@ func newBackgroundMachine(data: StateData): Machine =
 
   proc onCreateUpdateTags(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc initLoggedOut() =
-    const empty_string = "".cstring
-    let login_info = newJsObject()
-    # Set browser local storage
-    login_info.username = empty_string
-    login_info.access_token = empty_string
-    discard browser.storage.local.set(login_info)
-    # Set current config
-    machine.data.pocket_info.username = empty_string
-    machine.data.pocket_info.access_token = empty_string
+    machine.data.pocket_info.username = cstring ""
+    machine.data.pocket_info.access_token = cstring ""
     setBadgeNotLoggedIn()
     browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
     browser.bookmarks.onCreated.addListener(onCreateUpdateTags)
@@ -316,10 +308,9 @@ proc initBackgroundEvents(machine: Machine) =
 
 proc initBackground*() {.async.} =
   let storage = await browser.storage.local.get()
-  let state_data: StateData =
-    newStateData(settings = to(storage, Settings), pocket_info = to(storage, PocketINfo))
-  let machine = newBackgroundMachine(state_data)
+  let machine = newBackgroundMachine(newStateData(settings = to(storage, Settings)))
 
+  # TODO: Move this code into newBackgroundMachine?
   let is_logged_in = not (isUndefined(storage) and isUndefined(storage["access_token"]))
   # let is_logged_in = true
   if is_logged_in:
