@@ -1,3 +1,5 @@
+release: build-css (build "background" "release") (build "options_page" "release") (build "content_script" "release") build-ext
+
 build-css:
   npx unocss options/options.html src/options_page.nim -o dist/main.css
 
@@ -9,7 +11,6 @@ build file='background' d='debug':
 
 build-background:
   just build background testing
-  # nim js -d:testing src/background.nim
 
 watch-background:
   watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' 'just build-background'
@@ -34,8 +35,8 @@ dev:
   just watch-css &
   just watch-js
 
-build-ext: build-background build-options_page
-  zip tmp/extension.xpi {manifest.json,tests/*.js,*.html,dist/*.js}
+build-ext:
+  zip tmp/extension.xpi {manifest.json,*.html,dist/*.js,assests/*}
 
 watch-build-ext:
   watchexec -c -r -w tests/ -w src/ -w ./ -e nim 'just build-ext'
