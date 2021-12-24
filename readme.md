@@ -27,6 +27,6 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
   - https://github.com/disruptek/badresults
   - https://github.com/superfunc/maybe
   - fusion/matching
-- open/close rule lists
-- Add remove bookmark rules
+- Rule: remove bookmark
+- Rule: pocket archive ???
 - make repo

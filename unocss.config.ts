@@ -3,6 +3,8 @@ import fs from "fs";
 
 // npx unocss "options/options.html" "src/options_page.nim" -o dist/main.css
 
+// TODO: check out unocss presets
+
 const config = defineConfig({
   rules: [
     [/^basis\-(\d+)(\w*)$/, ruleFlexBasis],
@@ -22,12 +24,18 @@ const config = defineConfig({
     ["rule-input", "border-2 border-transparent hover:border-blue-400 focus:border-blue-400 w-full px-1"],
     ["rule-btn-remove-wrapper", "bg-red-50 rounded-r-full p-1 text-red-900"],
     ["rule-btn-remove", "bg-white block h-full rounded-full px-1.5 hover:bg-red-200"],
+    ["rule-btn-toggle", "bg-white rounded-full w-6 h-6 flex place-items-center justify-center hover:bg-gray-300"],
     ["rule-title", "bg-gray-100 w-full px-3 py-1 text-4.25"],
     ["rule-container", "bg-truegray-50 block p-3"],
   ],
   preflights: [
     { getCSS: () => fs.readFileSync("node_modules/@unocss/reset/tailwind.css").toString(), layer: "reset" },
     { getCSS: () => fs.readFileSync("src/styles/main.css").toString(), layer: "base" },
+    { getCSS: () => `
+      .rule-btn-toggle[aria-expanded='true']{
+        transform: rotate(0.5turn)
+      }
+    `, layer: "component" },
   ],
   layers: {
     reset: 0,
@@ -118,5 +126,6 @@ ${classSelector} > * {
 
   return `/* Error: Failed to generate switcher rule from ${selector} */`
 }
+
 
 export default config

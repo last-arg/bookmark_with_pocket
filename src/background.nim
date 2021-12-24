@@ -484,7 +484,7 @@ when isMainModule:
           check test_machine.data.pocket_info.access_token.len > 0, "Invalid 'access_token'"
 
         block add_bookmark:
-          # skip()
+          skip()
           await testAddBookMark()
 
     proc setup() {.async.} =
