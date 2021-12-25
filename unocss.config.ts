@@ -10,7 +10,7 @@ const config = defineConfig({
     [/^basis\-(\d+)(\w*)$/, ruleFlexBasis],
     [/^stack\-?(\d*)(\w*)$/, ruleStack, {layer: "component"}],
     [/^l-grid-?(\d*)(\w*)$/, ruleLayoutGrid, {layer: "component"}],
-    [/^switcher-?(\d*)(\w*)$/, ruleLayoutGrid, {layer: "component"}],
+    [/^switcher-?(\d*)(\w*)$/, ruleSwitcher, {layer: "component"}],
   ],
   shortcutsLayer: "component",
   shortcuts: [
