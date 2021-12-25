@@ -240,8 +240,8 @@ func newBackgroundMachine(data: StateData): Machine =
 
   proc onCreateUpdateTags(id: cstring, obj: JsObject) = discard asyncUpdateTagDates(machine.data)
   proc initLoggedOut() =
-    machine.data.pocket_info.username = cstring ""
-    machine.data.pocket_info.access_token = cstring ""
+    machine.data.pocket_info.username = nil
+    machine.data.pocket_info.access_token = nil
     setBadgeNotLoggedIn()
     browser.browserAction.onClicked.addListener(clickPocketLoginEvent)
     browser.bookmarks.onCreated.addListener(onCreateUpdateTags)
@@ -299,7 +299,6 @@ proc initBackground*() {.async.} =
   let storage = await browser.storage.local.get()
   let machine = newBackgroundMachine(newStateData(settings = to(storage, Settings)))
 
-  # TODO: Move this code into newBackgroundMachine?
   let is_logged_in = not (isUndefined(storage) and isUndefined(storage["access_token"]))
   # let is_logged_in = true
   if is_logged_in:
