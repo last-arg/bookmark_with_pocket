@@ -178,20 +178,9 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
     setBadgeNotLoggedIn("fail".cstring)
     return
 
-  var login_data = newJsObject()
-  const username = "username"
-  const access_token = "access_token"
-  login_data[access_token] = body_result.value
-  # TODO: get/save username
-
-  if login_data[access_token] == nil:
-    console.error("Failed to get access_token form Pocket API response")
-    setBadgeNotLoggedIn("fail".cstring)
-    return
-
+  let login_data = toJs(body_result.value())
   discard await browser.storage.local.set(login_data)
   machine.transition(Login, login_data)
-
 
 proc checkAddToPocket(input_tags: seq[cstring], settings: Settings): Option[seq[cstring]] =
   if hasNoAddTag(input_tags, settings.no_add_tags):
