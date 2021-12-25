@@ -1,4 +1,8 @@
-release: build-css build-js build-ext
+release: clean build-css build-js build-ext
+
+clean:
+  rm -rf dist/
+  mkdir dist
 
 build-js type='release': (build "background" type) (build "options_page" type) (build "content_script" type)
 
@@ -18,7 +22,7 @@ watch-background:
   watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' 'just build-background'
 
 build-options_page:
-  just build options_page
+  just build options_page testing
 
 watch-options_page:
   watchexec -c -r -w ./src/options_page.nim 'just build-options_page'
@@ -38,7 +42,7 @@ dev:
   just watch-js
 
 build-ext:
-  zip tmp/extension.xpi {manifest.json,*.html,dist/*.js,assests/*}
+  zip tmp/extension.xpi {manifest.json,*.html,dist/*.js,assets/*}
 
 geckodriver: build-ext
   nim c --threads:on -d:ssl -r tests/script_get_pocket_access_token.nim
@@ -49,12 +53,12 @@ watch-geckodriver:
 web-ext $TMPDIR="/tmp":
   web-ext run \
     --keep-profile-changes \
-    --ignore-files=src/* nimcache/* tmp/* tmp/**/* bin/* native-messaging/* node_modules/* tests/* .direnv/* \
+    --watch-files=dist/**/* index.html options/*.html \
     --pref=storage.sqlite.exclusiveLock.enabled=false \
-    -u 'about:devtools-toolbox?id=bookmarks-with-pocket@mozilla.org&type=extension'
+    -u 'about:devtools-toolbox?id=bookmark-with-pocket@mozilla.org&type=extension'
 
 setup-native-messaging:
-  # dependency: sqlite3
+  # dependencies: sqlite3
   nim c -d:release --opt:speed ./native-messaging/sqlite_update.nim
   cp -f ./bin/sqlite_update $HOME/.mozilla/native-messaging-hosts/sqlite_update
   cp -f ./native-messaging/sqlite_update.json $HOME/.mozilla/native-messaging-hosts/sqlite_update.json
