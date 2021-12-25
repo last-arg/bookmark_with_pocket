@@ -87,8 +87,8 @@ proc handleTagRules(ev: Event) =
   let elem = cast[Element](ev.target)
   if elem.nodeName != "BUTTON": return
 
+  let custom_elem = elem.closest("tag-rules")
   if elem.classList.contains("js-new-rule"):
-    let custom_elem = elem.closest("tag-rules")
     let ulElem = custom_elem.querySelector("ul")
     if ulElem.classList.contains("hidden"):
       ulElem.classList.remove("hidden")
@@ -108,13 +108,20 @@ proc handleTagRules(ev: Event) =
       ulElem.appendChild(newNode)
       labelElem.focus()
   elif elem.classList.contains("js-remove-rule"):
-    # TODO: where to put focus after element removal?
     let ul_elem = elem.closest("ul")
+    let li_elem = elem.closest("li")
+
+    let focus_elem = block:
+      let next_elem = to(toJs(li_elem).nextElementSibling, Element)
+      if isNull(next_elem): custom_elem.querySelector(".js-new-rule") else: next_elem
+
     if ul_elem.children.len > 1:
-      elem.closest("li").remove()
+      li_elem.remove()
     else:
       ul_elem.classList.add("hidden")
       ul_elem.querySelector("input[type='text']").value = ""
+
+    focus_elem.focus()
   else:
     console.error "Unhandled button was pressed"
 
