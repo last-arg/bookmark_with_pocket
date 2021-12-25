@@ -19,7 +19,7 @@
   ],
   "applications": {
     "gecko": {
-      "id": "bookmarks-with-pocket@mozilla.org"
+      "id": "bookmark-with-pocket@mozilla.org"
     }
   },
   "background": {
