@@ -3,5 +3,5 @@
   "description": "Example host for native messaging",
   "path": "/home/ck/.mozilla/native-messaging-hosts/sqlite_update",
   "type": "stdio",
-  "allowed_extensions": ["bookmarks-with-pocket@mozilla.org"]
+  "allowed_extensions": ["bookmark-with-pocket@mozilla.org"]
 }
