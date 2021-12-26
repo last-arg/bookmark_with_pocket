@@ -43,14 +43,13 @@ proc getTransition*(m: Machine, s: State, e: Event): Option[Transition] =
     none[Transition]()
 
 proc transition*(m: Machine, event: Event, param: JsObject = nil) =
-  let t_opt = m.getTransition(m.currentState, event)
-  if t_opt.isSome():
-    let t = t_opt.unsafeGet()
-    if t.cb.isSome():
-      t.cb.unsafeGet()(param)
-    m.currentState = t.next
-  else:
-    console.error "Transition is not defined: State(" & cstring($m.currentState) &
+  case m.getTransition(m.currentState, event):
+    of Some(@transition):
+      case transition.cb:
+        of Some(@callback): callback(param)
+      m.currentState = transition.next
+    else:
+      console.error "Transition is not defined: State(" & cstring($m.currentState) &
         ") Event(" & cstring($event) & "). Staying in current state: " & cstring($m.currentState)
 
 let badge_empty = newJsObject()
@@ -93,7 +92,8 @@ proc setBadgeFailed*(tab_id: int) =
 proc setBadgeNone*(tab_id: Option[int]) =
   let b_text = newJsObject()
   b_text["text"] = "".cstring
-  if isSome(tab_id): b_text["tabId"] = tab_id.unsafeGet()
+  case tab_id:
+    of Some(@id): b_text["tab_Id"] = id
   browser.browserAction.setBadgeText(b_text)
   let d = newJsObject()
   d["title"] = jsNull
