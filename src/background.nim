@@ -43,14 +43,12 @@ proc getTransition*(m: Machine, s: State, e: Event): Option[Transition] =
     none[Transition]()
 
 proc transition*(m: Machine, event: Event, param: JsObject = nil) =
-  case m.getTransition(m.currentState, event):
-    of Some(@transition):
-      case transition.cb:
-        of Some(@callback): callback(param)
-      m.currentState = transition.next
-    else:
-      console.error "Transition is not defined: State(" & cstring($m.currentState) &
-        ") Event(" & cstring($event) & "). Staying in current state: " & cstring($m.currentState)
+  if Some(@transition) ?= m.getTransition(m.currentState, event):
+    if Some(@callback) ?= transition.cb: callback(param)
+    m.currentState = transition.next
+  else:
+    console.error "Transition is not defined: State(" & cstring($m.currentState) &
+      ") Event(" & cstring($event) & "). Staying in current state: " & cstring($m.currentState)
 
 let badge_empty = newJsObject()
 badge_empty["path"] = "./assets/badge_empty.svg".cstring
@@ -92,8 +90,7 @@ proc setBadgeFailed*(tab_id: int) =
 proc setBadgeNone*(tab_id: Option[int]) =
   let b_text = newJsObject()
   b_text["text"] = "".cstring
-  case tab_id:
-    of Some(@id): b_text["tab_Id"] = id
+  if Some(@id) ?= tab_id: b_text["tabId"] = id
   browser.browserAction.setBadgeText(b_text)
   let d = newJsObject()
   d["title"] = jsNull
@@ -202,7 +199,7 @@ proc onCreateBookmark*(out_machine: Machine, bookmark: BookmarkTreeNode) {.async
       setBadgeLoading(tab_id)
       let link_result = await addLink(bookmark.url, out_data.pocket_info.access_token, tags)
       if link_result.isErr():
-        console.error "Failed to add bookmark to Pocket. Error type: " & $link_result.error()
+        console.error "Failed to add bookmark to Pocket. Error type: " & cstring($link_result.error())
         setBadgeFailed(tab_id)
       else:
         setBadgeSuccess(tab_id)
