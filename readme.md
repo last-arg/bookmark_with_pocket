@@ -13,6 +13,18 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 3) There is no way to modify bookmark tags
 
 
+## Steps to release web extension
+TODO
+
+
+## Development
+```
+# Will open firefox browser with web extension
+just web-ext
+# Watch js and css files
+just dev
+```
+
 ## Resources
 - [Pocket authentication](https://blog.wilgucki.pl/oauth-authentication-without-browser/)
 - [Optional value handling in Nim](https://peterme.net/optional-value-handling-in-nim.html)
