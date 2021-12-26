@@ -17,7 +17,6 @@ type
     data*: StateData
     transitions: TableRef[StateEvent, Transition]
 
-
   State* = enum
     InitialLoad
     LoggedIn

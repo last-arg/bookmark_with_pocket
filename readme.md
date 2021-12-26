@@ -16,14 +16,8 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 ## Resources
 - [Pocket authentication](https://blog.wilgucki.pl/oauth-authentication-without-browser/)
 - [Optional value handling in Nim](https://peterme.net/optional-value-handling-in-nim.html)
-- [Pattern matching in Nim ](https://nim-lang.org/blog/2021/03/10/fusion-and-pattern-matching.html)
+- [Pattern matching in Nim](https://nim-lang.org/blog/2021/03/10/fusion-and-pattern-matching.html)
 
 
 ## TODO
-- Explore handling of option/result values.
-  - https://github.com/arnetheduck/nim-result
-  - https://github.com/superfunc/maybe
-  - https://github.com/PMunch/nim-optionsutils
-  - https://github.com/disruptek/badresults
-  - fusion/matching
 - Rule: remove bookmark
