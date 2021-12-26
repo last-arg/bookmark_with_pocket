@@ -18,24 +18,16 @@ watch-css:
 build-background:
   just build background testing
 
-watch-background:
-  watchexec -c -r -w ./src -e nim -i 'src/options_page.nim' 'just build-background'
-
 build-options_page:
   just build options_page testing
 
-watch-options_page:
-  watchexec -c -r -w ./src/options_page.nim 'just build-options_page'
-
 build-content_script:
-  nim js -d:testing src/content_script.nim
-
-watch-content_script:
-  watchexec -c -r -w ./src -e nim -i 'src/background.nim' -i 'src/options_page.nim' 'just build-content'
+  just build content_script testing
 
 watch-js:
-  watchexec -c -r -w ./src -e nim -i 'src/{options_page, content_script}.nim' 'just build-background' &
-  watchexec -c -r -w ./src -e nim -i 'src/{background, content_script}.nim' 'just build options_page'
+  watchexec -c -w src/content_script.nim 'just build-content_script' &
+  watchexec -c -w ./src -e nim -i 'src/{options_page, content_script}.nim' 'just build-background' &
+  watchexec -c -w ./src -e nim -i 'src/{background, content_script}.nim' 'just build options_page'
 
 dev:
   just watch-css &
