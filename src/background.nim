@@ -151,19 +151,11 @@ proc filterTags*(tags: seq[cstring], discard_tags: seq[seq[cstring]]): seq[cstri
     new_tags = filter(tags, proc(item: cstring): bool = item notin rem_tags)
   return new_tags
 
-proc hasNoAddTag*(tags: seq[cstring], no_add_tags: seq[seq[cstring]]): bool =
-  for row in no_add_tags:
-    var no_add = true
-    for item in row:
-      no_add = no_add and tags.contains(item)
-    if no_add: return true
-  return false
-
-proc hasAddTag*(tags: seq[cstring], add_tags: seq[seq[cstring]]): bool =
-  for row in add_tags:
+proc hasRule*(input_tags: seq[cstring], rules: seq[seq[cstring]]): bool =
+  for rule in rules:
     var add = true
-    for item in row:
-      add = add and tags.contains(item)
+    for tags in rule:
+      add = add and input_tags.contains(tags)
     if add: return true
   return false
 
@@ -183,10 +175,10 @@ proc badgePocketLogin(machine: Machine, id: int) {.async.} =
   machine.transition(Login, login_data)
 
 proc checkAddToPocket(input_tags: seq[cstring], settings: Settings): Option[seq[cstring]] =
-  if hasNoAddTag(input_tags, settings.no_add_tags):
+  if hasRule(input_tags, settings.no_add_tags):
     return none[seq[cstring]]()
 
-  if settings.always_add_pocket or hasAddTag(input_tags, settings.add_tags):
+  if settings.always_add_pocket or hasRule(input_tags, settings.add_tags):
     return some(filterTags(input_tags, settings.exclude_tags))
 
   return none[seq[cstring]]()
