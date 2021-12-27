@@ -13,8 +13,12 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 3) There is no way to modify bookmark tags
 
 
-## Steps to release web extension
-TODO
+## Release web extension
+```
+# Will save web extension to 'build/bookmark_with_pocket.xpi'
+just release
+```
+Submit new firefox addon on https://addons.mozilla.org/en-US/developers/addon/submit/distribution
 
 
 ## Development
@@ -33,3 +37,5 @@ just dev
 
 ## TODO
 - Rule: remove bookmark
+- ??? Future: rule that adds tags to Pocket based on url
+- Show count of rules. Take into account when collapsed
