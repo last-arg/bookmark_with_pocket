@@ -41,77 +41,95 @@
 
         <div class="stack stack-12">
           <fieldset>
-            <legend class="rule-title">
-              <span>Rules: add Pocket link</span>
-              <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
-                <img class="w-4 h-4" src="/assets/chevron.svg">
-              </button>
-            </legend>
-            <tag-rules class="rule-container">
-              <ul class="mb-6 stack">
-                <li tabindex="-1">
-                  <p><label class="rule-label" for="add_tags">Tags</label></p>
-                  <div class="flex">
-                    <div class="rule-input-wrapper">
-                      <input class="rule-input" type="text" id="add_tags" name="add_tags">
+            <legend class="sr-only">Rules: add Pocket link</legend>
+            <tag-rules>
+              <div class="rule-title">
+                <span aria-hidden="true">Rules: add Pocket link</span>
+                <div class="flex">
+                  <span class="js-rules-count bg-gray-200 px-1.5 ml-2 mr-4">0</span>
+                  <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
+                    <img class="w-4 h-4" src="/assets/chevron.svg">
+                  </button>
+                </div>
+              </div>
+              <div class="rule-container">
+                <ul class="mb-6 stack">
+                  <li tabindex="-1">
+                    <p><label class="rule-label" for="add_tags">Tags</label></p>
+                    <div class="flex">
+                      <div class="rule-input-wrapper">
+                        <input class="rule-input" type="text" id="add_tags" name="add_tags">
+                      </div>
+                      <div class="rule-btn-remove-wrapper">
+                        <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                      </div>
                     </div>
-                    <div class="rule-btn-remove-wrapper">
-                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+                  </li>
+                </ul>
+                <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+              </div>
             </tag-rules>
           </fieldset>
 
           <fieldset>
-            <legend class="rule-title">
-              <span>Rules: don't add Pocket link</span>
-              <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
-                <img class="w-4 h-4" src="/assets/chevron.svg">
-              </button>
-            </legend>
-            <tag-rules class="rule-container">
-              <ul class="mb-6 stack">
-                <li tabindex="-1">
-                  <p><label class="rule-label" for="no_add_tags">Tags<label></p>
-                  <div class="flex">
-                    <div class="rule-input-wrapper">
-                      <input class="rule-input" type="text" id="no_add_tags" name="no_add_tags">
+            <legend class="sr-only">Rules: don't add Pocket link</legend>
+            <tag-rules>
+              <div class="rule-title">
+                <span aria-hidden="true">Rules: don't add Pocket link</span>
+                <div class="flex">
+                  <span class="js-rules-count bg-gray-200 px-1.5 ml-2 mr-4">0</span>
+                  <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
+                    <img class="w-4 h-4" src="/assets/chevron.svg">
+                  </button>
+                </div>
+              </div>
+              <div class="rule-container">
+                <ul class="mb-6 stack">
+                  <li tabindex="-1">
+                    <p><label class="rule-label" for="no_add_tags">Tags<label></p>
+                    <div class="flex">
+                      <div class="rule-input-wrapper">
+                        <input class="rule-input" type="text" id="no_add_tags" name="no_add_tags">
+                      </div>
+                      <div class="rule-btn-remove-wrapper">
+                        <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                      </div>
                     </div>
-                    <div class="rule-btn-remove-wrapper">
-                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+                  </li>
+                </ul>
+                <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+              </div>
             </tag-rules>
           </fieldset>
 
           <fieldset>
-            <legend class="rule-title">
-              <span>Rules: remove tags from Pocket link</span>
-              <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
-                <img class="w-4 h-4" src="/assets/chevron.svg">
-              </button>
-            </legend>
-            <tag-rules class="rule-container">
-              <ul class="mb-6 stack">
-                <li tabindex="-1">
-                  <p><label class="rule-label" for="exclude_tags">Tags<label></p>
-                  <div class="flex">
-                    <div class="rule-input-wrapper">
-                      <input class="rule-input" type="text" id="exclude_tags" name="exclude_tags">
+            <legend class="sr-only">Rules: remove tags from Pocket link</legend>
+            <tag-rules>
+              <div class="rule-title">
+                <span aria-hidden="true">Rules: remove tags from Pocket link</span>
+                <div class="self-start flex">
+                  <span class="js-rules-count bg-gray-200 px-1.5 ml-2 mr-4">0</span>
+                  <button class="js-rule-btn-toggle rule-btn-toggle" aria-expanded="true">
+                    <img class="w-4 h-4" src="/assets/chevron.svg">
+                  </button>
+                </div>
+              </div>
+              <div class="rule-container">
+                <ul class="mb-6 stack">
+                  <li tabindex="-1">
+                    <p><label class="rule-label" for="exclude_tags">Tags<label></p>
+                    <div class="flex">
+                      <div class="rule-input-wrapper">
+                        <input class="rule-input" type="text" id="exclude_tags" name="exclude_tags">
+                      </div>
+                      <div class="rule-btn-remove-wrapper">
+                        <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
+                      </div>
                     </div>
-                    <div class="rule-btn-remove-wrapper">
-                      <button class="js-remove-rule rule-btn-remove" type="button">Remove</button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-              <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+                  </li>
+                </ul>
+                <button type="button" class="js-new-rule rule-btn-add">+ Add new rule</button>
+              </div>
             </tag-rules>
           </fieldset>
         </div>

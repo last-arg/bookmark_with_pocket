@@ -103,6 +103,7 @@ proc handleTagRules(ev: Event) =
       setRuleNodeValues(newNode, new_name)
       ulElem.appendChild(newNode)
       labelElem.focus()
+    custom_elem.querySelector(".js-rules-count").textContent =  cstring $ulElem.children.len
   elif elem.classList.contains("js-remove-rule"):
     let ul_elem = elem.closest("ul")
     let li_elem = elem.closest("li")
@@ -111,12 +112,15 @@ proc handleTagRules(ev: Event) =
       let next_elem = to(toJs(li_elem).nextElementSibling, Element)
       if isNull(next_elem): custom_elem.querySelector(".js-new-rule") else: next_elem
 
+    var rules_count = 0
     if ul_elem.children.len > 1:
       li_elem.remove()
+      rules_count = ul_elem.children.len
     else:
       ul_elem.classList.add("hidden")
       ul_elem.querySelector("input[type='text']").value = ""
 
+    custom_elem.querySelector(".js-rules-count").textContent =  cstring $rules_count
     focus_elem.focus()
   else:
     console.error "Unhandled button was pressed"
@@ -141,6 +145,7 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
   if not isUndefined(rules) and rules.len > 0:
     let df = renderAll(storageKey, baseItem.cloneNode(true), rules)
     el.querySelector("ul").prepend(df)
+    el.querySelector(".js-rules-count").textContent = cstring $rules.len
     baseItem.remove()
   else:
     let new_name = baseItem.querySelector("label[for]").getAttribute("for") & "_0"
