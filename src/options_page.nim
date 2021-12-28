@@ -177,7 +177,7 @@ proc init() {.async.} =
       let elem = if ev.target.nodeName == "BUTTON": ev.target else: ev.target.parentElement
       let curr_val = elem.getAttribute("aria-expanded")
 
-      let tag_rules_elem = cast[Element](elem).closest("fieldset").querySelector("tag-rules")
+      let tag_rules_elem = cast[Element](elem).closest("tag-rules").querySelector("ul")
       if curr_val == "true":
         elem.setAttribute("aria-expanded", "false")
         tag_rules_elem.classList.add("hidden")
