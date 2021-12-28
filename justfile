@@ -1,6 +1,5 @@
 release: clean build-css build-js build-ext
 
-
 clean:
   rm -rf dist/
   mkdir dist
@@ -34,8 +33,11 @@ dev:
   just watch-css &
   just watch-js
 
-build-ext location='build/bookmark_with_pocket.xpi':
-  zip {{location}} {manifest.json,*.html,dist/*.js,assets/*}
+build_dir := "build"
+build-ext file='bookmark_with_pocket.xpi':
+  mkdir -p build
+  zip {{build_dir}}/{{file}} {manifest.json,*.html,dist/*.js,assets/*}
+  @echo "Build location: {{ build_dir }}/{{ file }}"
 
 geckodriver: (build-ext "tmp/extension.xpi")
   nim c --threads:on -d:ssl -r tests/script_get_pocket_access_token.nim
