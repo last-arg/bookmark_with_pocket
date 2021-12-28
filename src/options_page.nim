@@ -79,48 +79,38 @@ proc setRuleNodeValues(node: Node, tag_name: cstring, default_value: cstring = "
   tagsElem.defaultValue = default_value
   tagsElem.value = default_value
 
-proc handleTagRules(ev: Event) =
+proc handleTagRules(ev: Event, base_elem: Element) =
   let elem = cast[Element](ev.target)
   if elem.nodeName != "BUTTON": return
 
   let custom_elem = elem.closest("tag-rules")
   if elem.classList.contains("js-new-rule"):
     let ulElem = custom_elem.querySelector("ul")
-    if ulElem.classList.contains("hidden"):
-      ulElem.classList.remove("hidden")
-      ulElem.querySelector("input[type='text']").focus()
-    else:
-      let liElem = to(toJs(ulElem).lastElementChild, Element)
-      let newNode = liElem.cloneNode(true)
-      let labelElem = newNode.querySelector("label[for]")
-      let new_name = block:
-        let name_tmp = labelElem.getAttribute("for")
-        let start_index = name_tmp.lastIndexOf(cstring"_") + 1
-        let new_index = block:
-          let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
-          if isNan(cast[BiggestFloat](index)): 0 else: index + 1
-        name_tmp.slice(cint(0), cint(start_index)) & cstring($new_index)
-      setRuleNodeValues(newNode, new_name)
-      ulElem.appendChild(newNode)
-      labelElem.focus()
+    let newNode = block:
+      var elem = to(toJs(ulElem).lastElementChild, Element)
+      if isNull(elem): elem = base_elem
+      elem.cloneNode(true)
+    let labelElem = newNode.querySelector("label[for]")
+    let new_name = block:
+      let name_tmp = labelElem.getAttribute("for")
+      let start_index = name_tmp.lastIndexOf(cstring"_") + 1
+      let new_index = block:
+        let index = parseInt(name_tmp.slice(cint(start_index), cint(name_tmp.len)))
+        if isNan(cast[BiggestFloat](index)): 0 else: index + 1
+      name_tmp.slice(cint(0), cint(start_index)) & cstring($new_index)
+    setRuleNodeValues(newNode, new_name)
+    ulElem.appendChild(newNode)
+    labelElem.focus()
     custom_elem.querySelector(".js-rules-count").textContent =  cstring $ulElem.children.len
   elif elem.classList.contains("js-remove-rule"):
     let ul_elem = elem.closest("ul")
     let li_elem = elem.closest("li")
-
     let focus_elem = block:
       let next_elem = to(toJs(li_elem).nextElementSibling, Element)
       if isNull(next_elem): custom_elem.querySelector(".js-new-rule") else: next_elem
 
-    var rules_count = 0
-    if ul_elem.children.len > 1:
-      li_elem.remove()
-      rules_count = ul_elem.children.len
-    else:
-      ul_elem.classList.add("hidden")
-      ul_elem.querySelector("input[type='text']").value = ""
-
-    custom_elem.querySelector(".js-rules-count").textContent =  cstring $rules_count
+    li_elem.remove()
+    custom_elem.querySelector(".js-rules-count").textContent =  cstring $ul_elem.children.len
     focus_elem.focus()
   else:
     console.error "Unhandled button was pressed"
@@ -146,11 +136,8 @@ proc tagRulesConnectedCallback(el: Element) {.async.} =
     let df = renderAll(storageKey, baseItem.cloneNode(true), rules)
     el.querySelector("ul").prepend(df)
     el.querySelector(".js-rules-count").textContent = cstring $rules.len
-    baseItem.remove()
-  else:
-    let new_name = baseItem.querySelector("label[for]").getAttribute("for") & "_0"
-    el.querySelector("ul").classList.add("hidden")
-    setRuleNodeValues(baseItem, new_name)
+
+  baseItem.remove()
 
 
 proc init() {.async.} =
@@ -172,6 +159,7 @@ proc init() {.async.} =
     discard saveOptions(cast[FormElement](ev.target))
   )
 
+  # TODO: move event handling into custom element
   for btn in document.querySelectorAll(".js-rule-btn-toggle"):
     btn.addEventListener("click", proc(ev: Event) =
       let elem = if ev.target.nodeName == "BUTTON": ev.target else: ev.target.parentElement
@@ -190,7 +178,8 @@ proc init() {.async.} =
 class TagRules extends HTMLElement {
   constructor() {
     super()
-    this.addEventListener("click", `handleTagRules`)
+    const base_elem = this.querySelector("ul > li").cloneNode(true) 
+    this.addEventListener("click", (ev) => `handleTagRules`(ev, base_elem))
   }
   async connectedCallback() {
     `tagRulesConnectedCallback`(this)
