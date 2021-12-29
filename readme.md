@@ -15,7 +15,7 @@ So when dateGroupModified field is out of "sync" I might detect wrong tag(s).
 
 ## Release web extension
 ```
-# Will save web extension to 'build/bookmark_with_pocket.xpi'
+# Will build web extension to 'build/bookmark_with_pocket.xpi'
 just release
 ```
 Submit new firefox addon on https://addons.mozilla.org/en-US/developers/addon/submit/distribution
