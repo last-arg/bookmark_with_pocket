@@ -3,6 +3,7 @@ bin/
 dist/
 .direnv/
 tmp/
+build/
 nimcache/
 .envrc
 *.js

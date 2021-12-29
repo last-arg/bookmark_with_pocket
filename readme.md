@@ -38,4 +38,3 @@ just dev
 ## TODO
 - Rule: remove bookmark
 - ??? Future: rule that adds tags to Pocket based on url
-- fix saving options
