@@ -8,8 +8,8 @@
   },
   "devDependencies": {
     "@types/node": "^16.11.9",
-    "@unocss/reset": "^0.18.0",
-    "unocss": "^0.18.0"
+    "@unocss/reset": "^0.20.2",
+    "unocss": "^0.20.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
