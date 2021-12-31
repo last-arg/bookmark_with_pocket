@@ -48,7 +48,7 @@ watch-geckodriver:
 web-ext $TMPDIR="/tmp":
   web-ext run \
     --keep-profile-changes \
-    --watch-files=dist/**/* index.html options/*.html \
+    --watch-files=dist/* unocss.config.ts index.html options/*.html \
     --pref=storage.sqlite.exclusiveLock.enabled=false \
     -u 'about:devtools-toolbox?id=bookmark-with-pocket@mozilla.org&type=extension'
 
