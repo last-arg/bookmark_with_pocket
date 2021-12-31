@@ -11,6 +11,7 @@ const config = defineConfig({
     [/^stack\-?(\d*)(\w*)$/, ruleStack, {layer: "component"}],
     [/^l-grid-?(\d*)(\w*)$/, ruleLayoutGrid, {layer: "component"}],
     [/^switcher-?(\d*)(\w*)$/, ruleSwitcher, {layer: "component"}],
+    [/^tooltip$/, ruleTooltip, {layer: "component"}],
   ],
   shortcutsLayer: "component",
   shortcuts: [
@@ -125,6 +126,38 @@ ${classSelector} > * {
   if (nr !== '') return { [css_attr]: `${nr / 4}rem` }
 
   return `/* Error: Failed to generate switcher rule from ${selector} */`
+}
+
+function ruleTooltip() {
+  return `
+.btn-tooltip:hover + .tooltip,
+.btn-tooltip:focus + .tooltip {
+  display: block;
+}
+
+.tooltip {
+  display: none;
+  font-size: 0.875rem;
+  background: #EFF6FF;
+  padding: 0.5rem;
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 12px;
+  border-bottom: 3px solid #DBEAFE;
+}
+
+.tooltip:before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 3px;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 10px solid #DBEAFE;
+}
+  `
 }
 
 

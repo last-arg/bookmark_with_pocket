@@ -23,16 +23,19 @@
         <div>
           <p class="rule-title">General</p>
           <ul class="rule-container">
-            <li class="border-2 border-blue-100">
-              <div class="flex bg-blue-100 p-2">
+            <li class="relative flex bg-blue-100 p-1 justify-between items-center">
+              <div class="flex">
                 <input class="w-5 h-5 mr-2" type="checkbox" id="always_add_pocket" name="always_add_pocket">
                 <label class="leading-1.3em" for="always_add_pocket" aria-describeby="always_add_description">Add every bookmark to Pocket</label>
               </div>
-              <div class="text-sm bg-blue-50 p-2">
-                <pid="always_add_description">Enabling will ignore rules:</p>
+              <button class="btn-tooltip text-blue-300 hover:text-blue-400 focus:text-blue-400">
+                <svg class="fill-current h-5.25 w-5.25"><use xlink:href="/assets/tooltip.svg#tooltip" /></svg>
+              </button>
+              <div id="always_add_description" class="tooltip">
+                <p>Enabling will ignore rules:</p>
                 <ul class="list-disc list-inside">
-                  <li>"add Pocket link"</li>
-                  <li>"don't add Pocket link"</li>
+                  <li>add Pocket link</li>
+                  <li>don't add Pocket link</li>
                 </ul>
               </div>
             </li>
