@@ -112,8 +112,17 @@ proc handleTagRules(ev: Event, base_elem: Element) =
     li_elem.remove()
     custom_elem.querySelector(".js-rules-count").textContent =  cstring $ul_elem.children.len
     focus_elem.focus()
+  elif elem.classList.contains("js-rule-btn-toggle"):
+    let curr_val = elem.getAttribute("aria-expanded")
+    let tag_rules_elem = custom_elem.querySelector("ul")
+    if curr_val == "true":
+      elem.setAttribute("aria-expanded", "false")
+      tag_rules_elem.classList.add("hidden")
+    else:
+      elem.setAttribute("aria-expanded", "true")
+      tag_rules_elem.classList.remove("hidden")
   else:
-    console.error "Unhandled button was pressed"
+    console.warn "Unhandled button was pressed"
 
 
 proc renderAll(base_id: cstring, node: Node, rules: seq[seq[cstring]]): DocumentFragment =
@@ -159,20 +168,6 @@ proc init() {.async.} =
     discard saveOptions(cast[FormElement](ev.target))
   )
 
-  # TODO: move event handling into custom element
-  for btn in document.querySelectorAll(".js-rule-btn-toggle"):
-    btn.addEventListener("click", proc(ev: Event) =
-      let elem = if ev.target.nodeName == "BUTTON": ev.target else: ev.target.parentElement
-      let curr_val = elem.getAttribute("aria-expanded")
-
-      let tag_rules_elem = cast[Element](elem).closest("tag-rules").querySelector("ul")
-      if curr_val == "true":
-        elem.setAttribute("aria-expanded", "false")
-        tag_rules_elem.classList.add("hidden")
-      else:
-        elem.setAttribute("aria-expanded", "true")
-        tag_rules_elem.classList.remove("hidden")
-    )
 
 {.emit: """
 class TagRules extends HTMLElement {
